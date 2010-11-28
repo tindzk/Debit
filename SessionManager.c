@@ -34,8 +34,16 @@ def(String, Register, SessionInstance instance) {
 		.instance = instance
 	};
 
+	foreach (sess, this->sessions) {
+		if (Session_IsNull(sess->instance)) {
+			*sess = item;
+			goto out;
+		}
+	}
+
 	Sessions_Push(&this->sessions, item);
 
+out:
 	return item.id;
 }
 
