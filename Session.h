@@ -8,6 +8,7 @@ class {
 	bool changed;
 	ssize_t userId;
 	Time_UnixEpoch lastActivity;
+	String data;
 };
 
 ExtendClass;
@@ -20,6 +21,8 @@ def(bool, IsUser);
 def(bool, IsReferenced);
 def(bool, IsExpired);
 def(void, SetUserId, size_t id);
+def(String, GetData);
+def(void, SetData, String data);
 def(void, Logout);
 def(void, Touch);
 def(bool, HasChanged);

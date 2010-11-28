@@ -5,13 +5,16 @@ def(void, Init) {
 	this->userId = -1;
 	this->changed = false;
 	this->lastActivity = (Time_UnixEpoch) { 0, 0 };
+	this->data = HeapString(0);
 }
 
 def(void, Destroy) {
-
+	String_Destroy(&this->data);
 }
 
 def(void, Reset) {
+	String_Destroy(&this->data);
+
 	call(Init);
 }
 
@@ -39,6 +42,15 @@ def(bool, IsExpired) {
 
 def(void, SetUserId, size_t id) {
 	this->userId = id;
+	this->changed = true;
+}
+
+def(String, GetData) {
+	return String_Disown(this->data);
+}
+
+def(void, SetData, String data) {
+	String_Copy(&this->data, data);
 	this->changed = true;
 }
 
