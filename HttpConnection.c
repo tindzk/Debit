@@ -2,7 +2,7 @@
 
 extern Logger logger;
 
-class(self) {
+class {
 	Connection base;
 
 	bool replied;
@@ -328,7 +328,7 @@ static def(Connection_Status, Pull) {
 		: Connection_Status_Open;
 }
 
-ConnectionInterface Impl(self) = {
+Impl(Connection) = {
 	.size    = sizeof(self),
 	.init    = (void *) ref(Init),
 	.destroy = (void *) ref(Destroy),

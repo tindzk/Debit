@@ -3,14 +3,14 @@
 #undef self
 #define self Session
 
-class(self) {
+class {
 	bool ref;
 	bool changed;
 	ssize_t userId;
 	Time_UnixEpoch lastActivity;
 };
 
-ExtendClass(self);
+ExtendClass;
 
 def(void, Init);
 def(void, Destroy);

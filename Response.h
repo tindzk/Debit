@@ -25,13 +25,13 @@ record(ref(Body)) {
 	};
 };
 
-class(Response) {
+class {
 	HTTP_Version version;
 	ref(Body) body;
 	HTTP_Envelope envelope;
 };
 
-ExtendClass(Response);
+ExtendClass;
 
 def(void, Init, HTTP_Version version);
 def(void, Destroy);

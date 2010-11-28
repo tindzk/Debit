@@ -8,7 +8,7 @@
 
 Array_Define(ResourceInterface *, Resources);
 
-class(Router) {
+class {
 	Resources *resources;
 };
 

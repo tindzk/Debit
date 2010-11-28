@@ -17,4 +17,4 @@
 #undef self
 #define self HttpConnection
 
-ConnectionInterface Impl(self);
+extern Impl(Connection);

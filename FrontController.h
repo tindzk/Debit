@@ -8,7 +8,7 @@
 #undef self
 #define self FrontController
 
-class(self) {
+class {
 	Request           request;
 	GenericInstance   instance;
 	ResourceRoute     *route;

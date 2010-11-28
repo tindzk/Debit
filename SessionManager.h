@@ -13,7 +13,7 @@ record(SessionItem) {
 
 Array_Define(SessionItem, Sessions);
 
-class(self) {
+class {
 	Sessions *sessions;
 };
 
