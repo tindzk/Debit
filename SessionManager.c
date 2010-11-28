@@ -10,6 +10,12 @@ def(void, Init) {
 }
 
 def(void, Destroy) {
+	foreach (sess, this->sessions) {
+		String_Destroy(&sess->id);
+		Session_Destroy(sess->instance);
+		Session_Free(sess->instance);
+	}
+
 	Sessions_Free(this->sessions);
 }
 
@@ -23,10 +29,10 @@ def(String, Register, SessionInstance instance) {
 	Session *sess = Session_GetObject(instance);
 	sess->ref = true;
 
-	SessionItem item;
-
-	item.id       = call(GetUniqueId);
-	item.instance = instance;
+	SessionItem item = {
+		.id       = call(GetUniqueId),
+		.instance = instance
+	};
 
 	Sessions_Push(&this->sessions, item);
 
@@ -34,9 +40,9 @@ def(String, Register, SessionInstance instance) {
 }
 
 def(SessionInstance, Resolve, String id) {
-	forward (i, this->sessions->len) {
-		if (String_Equals(this->sessions->buf[i].id, id)) {
-			return this->sessions->buf[i].instance;
+	foreach (sess, this->sessions) {
+		if (String_Equals(sess->id, id)) {
+			return sess->instance;
 		}
 	}
 
@@ -44,12 +50,15 @@ def(SessionInstance, Resolve, String id) {
 }
 
 def(void, Unlink, String id) {
-	forward (i, this->sessions->len) {
-		if (String_Equals(this->sessions->buf[i].id, id)) {
-			Session *sess = Session_GetObject(this->sessions->buf[i].instance);
-			sess->ref = false;
+	foreach (sess, this->sessions) {
+		if (String_Equals(sess->id, id)) {
+			Session_Destroy(sess->instance);
+			Session_Free(sess->instance);
 
-			this->sessions->buf[i].instance = Session_Null();
+			String_Destroy(&sess->id);
+			sess->instance = Session_Null();
+
+			break;
 		}
 	}
 }

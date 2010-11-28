@@ -176,10 +176,11 @@ def(void, HandleRequest, ResponseInstance resp) {
 			this->request.sessionId);
 	}
 
-	SessionInstance sess = Session_New();
+	SessionInstance sess;
 
 	if (this->request.sessionId.len == 0) {
 		/* Initialize the session but don't map it to an ID, yet. */
+		sess = Session_New();
 		Session_Init(sess);
 	} else {
 		/* If the ID is found, just return its session object.
@@ -189,6 +190,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 			this->request.sessionId);
 
 		if (Session_IsNull(res)) {
+			sess = Session_New();
 			Session_Init(sess);
 		} else {
 			sess = res;
