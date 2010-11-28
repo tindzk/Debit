@@ -76,7 +76,7 @@ record(ResourceRoute) {
 	Role role;
 };
 
-record(ResourceInterface) {
+Interface(Resource) {
 	Role role;
 	size_t size;
 
