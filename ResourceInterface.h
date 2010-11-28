@@ -68,11 +68,11 @@ set(Role) {
 	Role_User
 };
 
-/* in route, Unspecified will inherit ACL from resource */
-
 record(ResourceRoute) {
 	String path;
 	ResourceAction *action;
+
+	/* If unspecified, the resource's role is inherited. */
 	Role role;
 };
 
