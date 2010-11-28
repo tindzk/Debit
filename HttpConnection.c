@@ -172,6 +172,20 @@ static def(String *, OnBodyParameter, String name) {
 	return FrontController_GetMemberAddr(&this->controller, name);
 }
 
+static def(void, OnSent, bool flush) {
+	/* When the connection is closed, the buffer is flushed
+	 * anyway. Therefore, we can save a syscall.
+	 */
+	if (flush && Response_IsPersistent(&this->resp)) {
+		SocketSession_Flush(&this->session);
+	}
+
+	this->replied    = true;
+	this->persistent = Response_IsPersistent(&this->resp);
+
+	Response_Destroy(&this->resp);
+}
+
 static def(void, OnFileSent,   __unused File *file);
 static def(void, OnBufferSent, __unused String *str);
 
@@ -198,41 +212,29 @@ static def(void, OnHeadersSent, String *s) {
 
 			break;
 
+		/* TODO */
 		case Response_BodyType_Stream:
-			/* TODO */
+			call(OnSent, true);
 			break;
 
 		case Response_BodyType_Empty:
+			call(OnSent, true);
 			break;
 	}
-}
-
-static def(void, OnSent) {
-	this->replied    = true;
-	this->persistent = Response_IsPersistent(&this->resp);
-
-	Response_Destroy(&this->resp);
 }
 
 static def(void, OnBufferSent, String *str) {
 	Logger_Debug(&logger, $("Buffer sent (% bytes)"),
 		Integer_ToString(str->len));
 
-	/* When the connection is closed, the buffer is flushed
-	 * nevertheless. Therefore, we can save a syscall.
-	 */
-	if (Response_IsPersistent(&this->resp)) {
-		SocketSession_Flush(&this->session);
-	}
-
-	call(OnSent);
+	call(OnSent, true);
 }
 
 static def(void, OnFileSent, __unused File *file) {
 	Logger_Debug(&logger, $("File sent"));
 
 	/* File transfers don't require flushing. */
-	call(OnSent);
+	call(OnSent, false);
 }
 
 static def(void, ProcessResponse, bool persistent) {
