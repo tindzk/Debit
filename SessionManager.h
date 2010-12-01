@@ -3,7 +3,6 @@
 
 #import "Session.h"
 
-#undef self
 #define self SessionManager
 
 record(SessionItem) {
@@ -24,3 +23,5 @@ def(void, Destroy);
 def(String, Register, SessionInstance instance);
 def(SessionInstance, Resolve, String id);
 def(void, Unlink, String id);
+
+#undef self

@@ -5,7 +5,6 @@
 #import "SessionManager.h"
 #import "ResourceInterface.h"
 
-#undef self
 #define self FrontController
 
 class {
@@ -28,3 +27,5 @@ def(void, SetRoute, ResourceRoute *route);
 def(void, SetResource, ResourceInterface *resource);
 def(void, CreateResource);
 def(void, HandleRequest, ResponseInstance resp);
+
+#undef self

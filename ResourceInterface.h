@@ -28,7 +28,7 @@ typedef void (ResourceAction) (
 	ResponseInstance $resp);
 
 #define action(name)                   \
-	def(void, name,                    \
+	static def(void, name,             \
 		__unused SessionInstance sess, \
 		__unused Request req,          \
 		__unused ResponseInstance resp)

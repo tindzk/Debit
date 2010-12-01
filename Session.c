@@ -1,5 +1,7 @@
 #import "Session.h"
 
+#define self Session
+
 def(void, Init) {
 	this->ref = false;
 	this->userId = -1;

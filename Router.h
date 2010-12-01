@@ -3,7 +3,6 @@
 
 #import "ResourceInterface.h"
 
-#undef self
 #define self Router
 
 Array_Define(ResourceInterface *, Resources);
@@ -32,3 +31,5 @@ def(void, AddResource, ResourceInterface *resource);
 def(bool, IsRouteMatching, StringArray *route, StringArray *path);
 def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPart);
 def(MatchingRoute, FindRoute, String path);
+
+#undef self

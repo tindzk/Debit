@@ -2,7 +2,6 @@
 #import <String.h>
 #import <HTTP/Envelope.h>
 
-#undef self
 #define self Response
 
 set(ref(BodyType)) {
@@ -47,3 +46,5 @@ def(void, SetContentType, String contentType);
 def(void, Process, bool persistent);
 def(ref(Body) *, GetBody);
 def(String, GetHeaders);
+
+#undef self

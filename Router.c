@@ -1,5 +1,7 @@
 #import "Router.h"
 
+#define self Router
+
 Singleton(self);
 SingletonDestructor(self);
 

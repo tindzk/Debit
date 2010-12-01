@@ -1,5 +1,7 @@
 #import "HttpConnection.h"
 
+#define self HttpConnection
+
 extern Logger logger;
 
 class {

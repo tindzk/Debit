@@ -14,7 +14,8 @@
 #import "FrontController.h"
 #import "ResourceInterface.h"
 
-#undef self
 #define self HttpConnection
 
 extern Impl(Connection);
+
+#undef self

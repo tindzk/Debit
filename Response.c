@@ -1,5 +1,7 @@
 #import "Response.h"
 
+#define self Response
+
 def(void, Init, HTTP_Version version) {
 	HTTP_Envelope_Init(&this->envelope);
 	HTTP_Envelope_SetStatus(&this->envelope, HTTP_Status_Success_Ok);

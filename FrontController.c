@@ -1,5 +1,7 @@
 #import "FrontController.h"
 
+#define self FrontController
+
 extern Logger logger;
 
 static def(void, Defaults) {

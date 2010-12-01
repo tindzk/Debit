@@ -1,6 +1,5 @@
 #import <Time.h>
 
-#undef self
 #define self Session
 
 class {
@@ -26,3 +25,5 @@ def(void, SetData, String data);
 def(void, Logout);
 def(void, Touch);
 def(bool, HasChanged);
+
+#undef self

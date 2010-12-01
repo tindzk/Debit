@@ -1,5 +1,7 @@
 #import "SessionManager.h"
 
+#define self SessionManager
+
 /* TODO Use a more efficient data structure. */
 
 Singleton(self);
