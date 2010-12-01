@@ -16,19 +16,7 @@ def(void, Init) {
 	call(Defaults);
 }
 
-def(void, Destroy) {
-	if (!Generic_IsNull(this->instance)) {
-		call(DestroyResource);
-	}
-
-	String_Destroy(&this->request.sessionId);
-}
-
-def(void, DestroyResource) {
-	if (this->resource == NULL || Generic_IsNull(this->instance)) {
-		return;
-	}
-
+static def(void, DestroyResource) {
 	if (this->resource->destroy != NULL) {
 		this->resource->destroy(this->instance);
 	}
@@ -50,15 +38,28 @@ def(void, DestroyResource) {
 		}
 	}
 
-	Generic_Free(this->instance);
+	if (!Generic_IsNull(this->instance)) {
+		Generic_Free(this->instance);
+	}
+}
+
+def(void, Destroy) {
+	if (this->resource != NULL) {
+		call(DestroyResource);
+	}
+
+	String_Destroy(&this->request.sessionId);
 }
 
 def(bool, HasResource) {
-	return !Generic_IsNull(this->instance);
+	return this->resource != NULL;
 }
 
 def(void, Reset) {
-	call(DestroyResource);
+	if (this->resource != NULL) {
+		call(DestroyResource);
+	}
+
 	call(Defaults);
 }
 
@@ -77,7 +78,7 @@ def(void, SetHeader, String name, String value) {
 	}
 }
 
-def(ResourceMember *, ResolveMember, String name) {
+static def(ResourceMember *, ResolveMember, String name) {
 	forward (i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
@@ -135,7 +136,9 @@ def(void, SetResource, ResourceInterface *resource) {
 }
 
 def(void, CreateResource) {
-	this->instance = Generic_New(this->resource->size);
+	this->instance = (this->resource->size > 0)
+		? Generic_New(this->resource->size)
+		: Generic_Null();
 
 	forward (i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
