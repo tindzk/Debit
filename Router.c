@@ -14,8 +14,8 @@ def(void, Destroy) {
 }
 
 def(void, DestroyMatch, MatchingRoute match) {
-	Array_Destroy(match.pathElems);
-	Array_Destroy(match.routeElems);
+	StringArray_Free(match.pathElems);
+	StringArray_Free(match.routeElems);
 }
 
 def(void, AddResource, ResourceInterface *resource) {
@@ -78,11 +78,11 @@ def(MatchingRoute, FindRoute, String path) {
 				return match;
 			}
 
-			Array_Destroy(arrRoute);
+			StringArray_Free(arrRoute);
 		}
 	}
 
-	Array_Destroy(arrPath);
+	StringArray_Free(arrPath);
 
 	return (MatchingRoute) { NULL, NULL, NULL, NULL };
 }

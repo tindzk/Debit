@@ -10,7 +10,7 @@ record(SessionItem) {
 	SessionInstance instance;
 };
 
-Array_Define(SessionItem, Sessions);
+Array(SessionItem, Sessions);
 
 class {
 	Sessions *sessions;

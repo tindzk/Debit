@@ -5,7 +5,7 @@
 
 #define self Router
 
-Array_Define(ResourceInterface *, Resources);
+Array(ResourceInterface *, Resources);
 
 class {
 	Resources *resources;
