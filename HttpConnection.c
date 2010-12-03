@@ -39,16 +39,15 @@ def(void, Init, SocketConnection *conn) {
 
 	SocketSession_Init(&this->session, conn);
 
-	HTTP_Server_Events events;
-	events.onHeader         = (HTTP_OnHeader) Callback(this, ref(OnHeader));
-	events.onVersion        = (HTTP_OnVersion) Callback(this, ref(OnVersion));
-	events.onMethod         = (HTTP_OnMethod) Callback(this, ref(OnMethod));
-	events.onPath           = (HTTP_OnPath) Callback(this, ref(OnPath));
-	events.onQueryParameter = (HTTP_OnParameter) Callback(this, ref(OnQueryParameter));
-	events.onBodyParameter  = (HTTP_OnParameter) Callback(this, ref(OnBodyParameter));
-	events.onRespond        = (HTTP_Server_OnRespond) Callback(this, ref(OnRespond));
+	HTTP_Server_Init(&this->server, conn, 2048, 4096);
 
-	HTTP_Server_Init(&this->server, events, conn, 2048, 4096);
+	HTTP_Server_BindHeader(&this->server, Callback(this, ref(OnHeader)));
+	HTTP_Server_BindVersion(&this->server, Callback(this, ref(OnVersion)));
+	HTTP_Server_BindMethod(&this->server, Callback(this, ref(OnMethod)));
+	HTTP_Server_BindPath(&this->server, Callback(this, ref(OnPath)));
+	HTTP_Server_BindQueryParameter(&this->server, Callback(this, ref(OnQueryParameter)));
+	HTTP_Server_BindBodyParameter(&this->server, Callback(this, ref(OnBodyParameter)));
+	HTTP_Server_BindRespond(&this->server, Callback(this, ref(OnRespond)));
 
 	Logger_Debug(&logger, $("Connection initialized"));
 }
