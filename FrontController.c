@@ -10,11 +10,14 @@ static def(void, Defaults) {
 	this->instance = Generic_Null();
 
 	this->request.lastModified  = Date_RFC822_Empty();
+	this->request.referer.len   = 0;
 	this->request.sessionId.len = 0;
 }
 
 def(void, Init) {
 	this->request.sessionId = HeapString(0);
+	this->request.referer   = HeapString(0);
+
 	call(Defaults);
 }
 
@@ -50,6 +53,7 @@ def(void, Destroy) {
 		call(DestroyResource);
 	}
 
+	String_Destroy(&this->request.referer);
 	String_Destroy(&this->request.sessionId);
 }
 
@@ -77,6 +81,8 @@ def(void, SetHeader, String name, String value) {
 
 	if (String_Equals(name, String("if-modified-since"))) {
 		this->request.lastModified = Date_RFC822_Parse(value);
+	} else if (String_Equals(name, String("referer"))) {
+		String_Copy(&this->request.referer, value);
 	}
 }
 

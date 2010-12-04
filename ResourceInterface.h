@@ -14,6 +14,7 @@
 #endif
 
 record(Request) {
+	String referer;
 	String sessionId;
 	HTTP_Method method;
 	Date_RFC822 lastModified;
