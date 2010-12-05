@@ -28,12 +28,14 @@ class {
 	HTTP_Version version;
 	ref(Body) body;
 	HTTP_Envelope envelope;
+	String headers;
 };
 
 ExtendClass;
 
-def(void, Init, HTTP_Version version);
+def(void, Init);
 def(void, Destroy);
+def(void, SetVersion, HTTP_Version version);
 def(void, SetStatus, HTTP_Status status);
 def(bool, IsStream);
 def(bool, IsPersistent);

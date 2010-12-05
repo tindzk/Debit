@@ -50,18 +50,24 @@ def(void, Init, SocketConnection *conn) {
 	HTTP_Server_BindRespond(&this->server, Callback(this, ref(OnRespond)));
 
 	Logger_Debug(&logger, $("Connection initialized"));
+
+	Response_Init(&this->resp);
 }
 
 def(void, Destroy) {
 	Logger_Debug(&logger, $("Connection destroyed"));
 	HTTP_Server_Destroy(&this->server);
 	FrontController_Destroy(&this->controller);
+
+	Response_Destroy(&this->resp);
 }
 
 static def(void, Error, HTTP_Status status, String msg);
 
 def(void, Process) {
 	this->incomplete = true;
+
+	String fmt = HeapString(0);
 
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
@@ -75,11 +81,10 @@ def(void, Process) {
 		call(Error, HTTP_Status_ServerError_NotImplemented,
 			$("Method is not implemented."));
 	} catch(HTTP_Server, excBodyUnexpected) {
-		String fmt = String_Format(
+		fmt = String_Format(
 			$("Body not expected with method '%'."),
 			HTTP_Method_ToString(this->method));
 		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt);
-		String_Destroy(&fmt);
 	} catch(HTTP_Header, excRequestMalformed) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Request malformed."));
@@ -99,11 +104,12 @@ def(void, Process) {
 		Logger_Error(&logger, $("Uncaught exception in HTTP server"));
 		__exc_rethrow = true;
 	} finally {
-
+		String_Destroy(&fmt);
 	} tryEnd;
 }
 
 static def(void, OnVersion, HTTP_Version version) {
+	Response_SetVersion(&this->resp, version);
 	this->version = version;
 }
 
@@ -115,12 +121,10 @@ static def(void, OnMethod, HTTP_Method method) {
 static def(void, OnPath, String path) {
 	FrontController_Reset(&this->controller);
 
-	Logger_Info(&logger, $("% % HTTP/%"),
+	Logger_Info(&logger, $("% % %"),
 		HTTP_Method_ToString(this->method),
 		path,
-		this->version == HTTP_Version_1_0
-			? $("1.0")
-			: $("1.1"));
+		HTTP_Version_ToString(this->version));
 
 	RouterInstance router = Router_GetInstance();
 
@@ -183,8 +187,6 @@ static def(void, OnSent, bool flush) {
 
 	this->replied    = true;
 	this->persistent = Response_IsPersistent(&this->resp);
-
-	Response_Destroy(&this->resp);
 }
 
 static def(void, OnFileSent,   __unused File *file);
@@ -193,8 +195,6 @@ static def(void, OnBufferSent, __unused String *str);
 static def(void, OnHeadersSent, String *s) {
 	Logger_Debug(&logger, $("Response headers sent (% bytes)"),
 		Integer_ToString(s->len));
-
-	String_Destroy(s);
 
 	Response_Body *body = Response_GetBody(&this->resp);
 
@@ -247,8 +247,6 @@ static def(void, ProcessResponse, bool persistent) {
 }
 
 static def(void, OnRespond, bool persistent) {
-	Response_Init(&this->resp, this->version);
-
 	if (FrontController_HasResource(&this->controller)) {
 		FrontController_HandleRequest(&this->controller,
 			&this->resp);
@@ -268,7 +266,6 @@ static def(void, Error, HTTP_Status status, String msg) {
 
 	Logger_Error(&logger, $("Client error: %"), msg);
 
-	Response_Init(&this->resp, this->version);
 	Response_SetStatus(&this->resp, status);
 
 	HTTP_Status_Item st = HTTP_Status_GetItem(status);
