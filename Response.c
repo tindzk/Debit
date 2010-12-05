@@ -2,20 +2,22 @@
 
 #define self Response
 
-def(void, Init) {
-	HTTP_Envelope_Init(&this->envelope);
+static def(void, Defaults) {
+	this->body.type = ref(BodyType_Empty);
+	this->version   = HTTP_Version_1_0;
+
 	HTTP_Envelope_SetStatus(&this->envelope, HTTP_Status_Success_Ok);
 	HTTP_Envelope_SetContentLength(&this->envelope, 0);
+}
 
-	this->body.type = ref(BodyType_Empty);
+def(void, Init) {
+	HTTP_Envelope_Init(&this->envelope);
+	call(Defaults);
 
-	this->version = HTTP_Version_1_0;
 	this->headers = HeapString(0);
 }
 
 static def(void, DestroyBody) {
-	HTTP_Envelope_SetContentLength(&this->envelope, 0);
-
 	if (this->body.type == ref(BodyType_Buffer)) {
 		if (this->body.buf.mutable) {
 			String_Destroy(&this->body.buf);
@@ -27,11 +29,17 @@ static def(void, DestroyBody) {
 	}
 }
 
-def(void, Destroy) {
-	HTTP_Envelope_Destroy(&this->envelope);
+def(void, Reset) {
 	call(DestroyBody);
+	call(Defaults);
 
 	String_Destroy(&this->headers);
+	this->headers = HeapString(0);
+}
+
+def(void, Destroy) {
+	HTTP_Envelope_Destroy(&this->envelope);
+	call(Reset);
 }
 
 def(void, SetVersion, HTTP_Version version) {

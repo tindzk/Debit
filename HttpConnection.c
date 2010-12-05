@@ -119,6 +119,7 @@ static def(void, OnMethod, HTTP_Method method) {
 
 /* Parameters to extract from URL. */
 static def(void, OnPath, String path) {
+	Response_Reset(&this->resp);
 	FrontController_Reset(&this->controller);
 
 	Logger_Info(&logger, $("% % %"),

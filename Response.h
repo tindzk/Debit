@@ -34,6 +34,7 @@ class {
 ExtendClass;
 
 def(void, Init);
+def(void, Reset);
 def(void, Destroy);
 def(void, SetVersion, HTTP_Version version);
 def(void, SetStatus, HTTP_Status status);
