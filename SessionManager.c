@@ -23,7 +23,7 @@ def(void, Destroy) {
 
 /* TODO Use a better algorithm. */
 def(String, GetUniqueId) {
-	Time_UnixEpoch time = Time_GetCurrentUnixTime();
+	Time_UnixEpoch time = Time_GetCurrent();
 	return String_Clone(Integer_ToString((u32) time.sec));
 }
 

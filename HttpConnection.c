@@ -71,33 +71,33 @@ def(void, Process) {
 
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
-	} clean catch(HTTP_Query, excExceedsPermittedLength) {
+	} clean catch(HTTP_Query, ExceedsPermittedLength) {
 		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
 			$("A parameter exceeds its permitted length."));
-	} catch(HTTP_Header, excUnknownVersion) {
+	} catch(HTTP_Header, UnknownVersion) {
 		call(Error, HTTP_Status_ServerError_VersionNotSupported,
 			$("Unknown HTTP version."));
-	} catch(HTTP_Header, excUnknownMethod) {
+	} catch(HTTP_Header, UnknownMethod) {
 		call(Error, HTTP_Status_ServerError_NotImplemented,
 			$("Method is not implemented."));
-	} catch(HTTP_Server, excBodyUnexpected) {
+	} catch(HTTP_Server, BodyUnexpected) {
 		fmt = String_Format(
 			$("Body not expected with method '%'."),
 			HTTP_Method_ToString(this->method));
 		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt);
-	} catch(HTTP_Header, excRequestMalformed) {
+	} catch(HTTP_Header, RequestMalformed) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Request malformed."));
-	} catch(HTTP_Server, excHeaderTooLarge) {
+	} catch(HTTP_Server, HeaderTooLarge) {
 		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
 			$("The header exceeds its permitted length."));
-	} catch(HTTP_Server, excBodyTooLarge) {
+	} catch(HTTP_Server, BodyTooLarge) {
 		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
 			$("The body exceeds its permitted length."));
-	} catch(HTTP_Server, excUnknownContentType) {
+	} catch(HTTP_Server, UnknownContentType) {
 		call(Error, HTTP_Status_ClientError_NotAcceptable,
 			$("Content-Type not recognized."));
-	} catch(HTTP_Header, excEmptyRequestUri) {
+	} catch(HTTP_Header, EmptyRequestUri) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Empty request URI."));
 	} catchAny {

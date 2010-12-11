@@ -38,7 +38,7 @@ def(bool, IsExpired) {
 		return false;
 	}
 
-	Time_UnixEpoch cur = Time_GetCurrentUnixTime();
+	Time_UnixEpoch cur = Time_GetCurrent();
 	return (cur.sec - this->lastActivity.sec) > 60 * 60 * 24; /* One day. */
 }
 
@@ -62,7 +62,7 @@ def(void, Logout) {
 }
 
 def(void, Touch) {
-	this->lastActivity = Time_GetCurrentUnixTime();
+	this->lastActivity = Time_GetCurrent();
 	this->changed = true;
 }
 

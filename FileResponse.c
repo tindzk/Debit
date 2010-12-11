@@ -41,10 +41,10 @@ void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
 				Response_SetLastModified(resp, fileTime);
 			}
 		}
-	} clean catch(File, excNotFound) {
+	} clean catch(File, NotFound) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
 		BufferResponse(resp, $("File not found."));
-	} catch(File, excAccessDenied) {
+	} catch(File, AccessDenied) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_Forbidden);
 		BufferResponse(resp, $("Access denied."));
 	} finally {
