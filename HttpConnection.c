@@ -5,8 +5,6 @@
 extern Logger logger;
 
 class {
-	Connection base;
-
 	bool replied;
 	bool incomplete;
 	bool persistent;
@@ -309,24 +307,24 @@ static def(bool, Close) {
 	return false;
 }
 
-static def(Connection_Status, Push) {
+static def(ClientConnection_Status, Push) {
 	Logger_Debug(&logger, $("Got push"));
 
 	call(Process);
 
 	return SocketSession_IsIdle(&this->session) && call(Close)
-		? Connection_Status_Close
-		: Connection_Status_Open;
+		? ClientConnection_Status_Close
+		: ClientConnection_Status_Open;
 }
 
-static def(Connection_Status, Pull) {
+static def(ClientConnection_Status, Pull) {
 	Logger_Debug(&logger, $("Got pull"));
 
 	SocketSession_Continue(&this->session);
 
 	return SocketSession_IsIdle(&this->session) && call(Close)
-		? Connection_Status_Close
-		: Connection_Status_Open;
+		? ClientConnection_Status_Close
+		: ClientConnection_Status_Open;
 }
 
 Impl(Connection) = {
