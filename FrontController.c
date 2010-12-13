@@ -79,9 +79,9 @@ def(void, SetHeader, String name, String value) {
 	name.mutable = true;
 	String_ToLower(&name);
 
-	if (String_Equals(name, String("if-modified-since"))) {
+	if (String_Equals(name, $("if-modified-since"))) {
 		this->request.lastModified = Date_RFC822_Parse(value);
-	} else if (String_Equals(name, String("referer"))) {
+	} else if (String_Equals(name, $("referer"))) {
 		String_Copy(&this->request.referer, value);
 	}
 }

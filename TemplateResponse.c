@@ -7,5 +7,5 @@ void TemplateResponse(ResponseInstance resp, void *ptr, void *context) {
 	((Render *) ptr)(context, &out);
 
 	Response_SetBufferBody(resp, out);
-	Response_SetContentType(resp, String("text/html; charset=utf-8"));
+	Response_SetContentType(resp, $("text/html; charset=utf-8"));
 }
