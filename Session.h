@@ -1,29 +1,26 @@
 #import <Time.h>
+#import <Date.h>
 
 #define self Session
 
 class {
 	bool ref;
 	bool changed;
-	ssize_t userId;
+
 	Time_UnixEpoch lastActivity;
-	String data;
+
+	char data[];
 };
 
-ExtendClass;
-
+sdef(SessionInstance, New, size_t data);
 def(void, Init);
 def(void, Destroy);
 def(void, Reset);
-def(bool, IsGuest);
-def(bool, IsUser);
+def(GenericInstance, GetData);
 def(bool, IsReferenced);
-def(bool, IsExpired);
-def(void, SetUserId, size_t id);
-def(String, GetData);
-def(void, SetData, String data);
-def(void, Logout);
-def(void, Touch);
 def(bool, HasChanged);
+def(void, SetChanged);
+def(bool, IsExpired);
+def(void, Touch);
 
 #undef self

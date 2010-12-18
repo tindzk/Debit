@@ -191,18 +191,16 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	if (this->request.sessionId.len == 0) {
 		/* Initialize the session but don't map it to an ID, yet. */
-		sess = Session_New();
-		Session_Init(sess);
+		sess = SessionManager_CreateSession(sessMgr);
 	} else {
-		/* If the ID is found, just return its session object.
-		 * Otherwise return an empty object.
+		/* If the ID is found, just use its session object. Otherwise create an
+		 * empty session object.
 		 */
 		SessionInstance res = SessionManager_Resolve(sessMgr,
 			this->request.sessionId);
 
 		if (Session_IsNull(res)) {
-			sess = Session_New();
-			Session_Init(sess);
+			sess = SessionManager_CreateSession(sessMgr);
 		} else {
 			sess = res;
 		}
@@ -220,7 +218,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Session_Reset(sess);
 	}
 
-	if (this->route->role == Role_Guest || Session_IsUser(sess)) {
+	if (this->route->role == Role_Guest /* || Session_IsUser(sess) */) {
 		/* Rule doesn't require user role or client is already
 		 * authorized.
 		 */
@@ -246,7 +244,6 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Session_Touch(sess);
 	} else {
 		/* Session was not used. It can be safely destroyed. */
-		Session_Destroy(sess);
-		Session_Free(sess);
+		SessionManager_DestroySession(sessMgr, sess);
 	}
 }

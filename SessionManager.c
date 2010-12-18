@@ -9,16 +9,50 @@ SingletonDestructor(self);
 
 def(void, Init) {
 	this->sessions = Sessions_New(1024);
+	this->backend  = NULL;
+}
+
+static def(void, DestroyItem, SessionItem *item) {
+	String_Destroy(&item->id);
+	call(DestroySession, item->instance);
 }
 
 def(void, Destroy) {
 	foreach (sess, this->sessions) {
-		String_Destroy(&sess->id);
-		Session_Destroy(sess->instance);
-		Session_Free(sess->instance);
+		call(DestroyItem, sess);
 	}
 
 	Sessions_Free(this->sessions);
+}
+
+def(void, SetBackend, BackendSessionInterface *backend) {
+	this->backend = backend;
+}
+
+def(SessionInstance, CreateSession) {
+	SessionInstance sess =
+		Session_New(
+			(this->backend != NULL)
+				? this->backend->size
+				: 0);
+
+	Session_Init(sess);
+
+	if (this->backend != NULL) {
+		this->backend->init(Session_GetData(sess));
+	}
+
+	return sess;
+}
+
+def(void, DestroySession, SessionInstance sess) {
+	if (this->backend != NULL) {
+		this->backend->destroy(Session_GetData(sess));
+	}
+
+	Session_Destroy(sess);
+
+	Generic_Free(sess);
 }
 
 /* TODO Use a better algorithm. */
@@ -62,10 +96,7 @@ def(SessionInstance, Resolve, String id) {
 def(void, Unlink, String id) {
 	foreach (sess, this->sessions) {
 		if (String_Equals(sess->id, id)) {
-			Session_Destroy(sess->instance);
-			Session_Free(sess->instance);
-
-			String_Destroy(&sess->id);
+			call(DestroyItem, sess);
 			sess->instance = Session_Null();
 
 			break;
