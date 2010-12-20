@@ -12,6 +12,7 @@ void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
 		if (!BitMask_Has(attr.mode, FileMode_Regular)) {
 			Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
 			BufferResponse(resp, $("Not a file."));
+			Logger_Error(&logger, $("Not a file."));
 		} else {
 			DateTime fileTime = DateTime_FromUnixEpoch(attr.mtime.sec);
 
@@ -44,9 +45,11 @@ void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
 	} clean catch(File, NotFound) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
 		BufferResponse(resp, $("File not found."));
+		Logger_Error(&logger, $("File not found."));
 	} catch(File, AccessDenied) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_Forbidden);
 		BufferResponse(resp, $("Access denied."));
+		Logger_Error(&logger, $("Access denied."));
 	} finally {
 
 	} tryEnd;
