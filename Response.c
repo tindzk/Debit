@@ -41,8 +41,8 @@ def(void, Reset) {
 }
 
 def(void, Destroy) {
-	HTTP_Envelope_Destroy(&this->envelope);
 	call(Reset);
+	HTTP_Envelope_Destroy(&this->envelope);
 }
 
 def(void, SetVersion, HTTP_Version version) {
