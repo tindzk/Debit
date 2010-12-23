@@ -14,8 +14,13 @@ def(void, Destroy) {
 }
 
 def(void, DestroyMatch, MatchingRoute match) {
-	StringArray_Free(match.pathElems);
-	StringArray_Free(match.routeElems);
+	if (match.pathElems != NULL) {
+		StringArray_Free(match.pathElems);
+	}
+
+	if (match.routeElems != NULL) {
+		StringArray_Free(match.routeElems);
+	}
 }
 
 def(void, AddResource, ResourceInterface *resource) {
@@ -61,19 +66,19 @@ def(MatchingRoute, FindRoute, String path) {
 		forward (j, ResourceInterface_MaxRoutes) {
 			ResourceRoute *route = &resource->routes[j];
 
-			if (route->path.buf == NULL) {
+			if (route->path.len == 0) {
 				break;
 			}
 
 			StringArray *arrRoute = String_Split(route->path, '/');
 
 			if (call(IsRouteMatching, arrRoute, arrPath)) {
-				MatchingRoute match;
-
-				match.route      = route;
-				match.resource   = resource;
-				match.pathElems  = arrPath;
-				match.routeElems = arrRoute;
+				MatchingRoute match = {
+					.route      = route,
+					.resource   = resource,
+					.pathElems  = arrPath,
+					.routeElems = arrRoute
+				};
 
 				return match;
 			}
@@ -84,5 +89,28 @@ def(MatchingRoute, FindRoute, String path) {
 
 	StringArray_Free(arrPath);
 
-	return (MatchingRoute) { NULL, NULL, NULL, NULL };
+	return (MatchingRoute) { .route = NULL };
+}
+
+def(MatchingRoute, GetDefaultRoute) {
+	forward (i, this->resources->len) {
+		ResourceInterface *resource = this->resources->buf[i];
+
+		forward (j, ResourceInterface_MaxRoutes) {
+			ResourceRoute *route = &resource->routes[j];
+
+			if (route->path.len == 0) {
+				break;
+			}
+
+			if (String_Equals(route->path, $("*"))) {
+				return (MatchingRoute) {
+					.route    = route,
+					.resource = resource
+				};
+			}
+		}
+	}
+
+	return (MatchingRoute) { .route = NULL };
 }

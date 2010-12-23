@@ -129,18 +129,25 @@ static def(void, OnPath, String path) {
 
 	MatchingRoute match = Router_FindRoute(router, path);
 
+	if (match.route == NULL) {
+		match = Router_GetDefaultRoute(router);
+	}
+
 	if (match.route != NULL) {
 		FrontController_SetMethod(&this->controller, this->method);
 		FrontController_SetRoute(&this->controller, match.route);
 		FrontController_SetResource(&this->controller, match.resource);
 		FrontController_CreateResource(&this->controller);
 
-		Router_ExtractParts(router,
-			match.routeElems,
-			match.pathElems,
-			Callback(
-				&this->controller,
-				FrontController_Store));
+		/* `routeElems' and `pathElems' aren't used for the default route. */
+		if (match.routeElems != NULL) {
+			Router_ExtractParts(router,
+				match.routeElems,
+				match.pathElems,
+				Callback(
+					&this->controller,
+					FrontController_Store));
+		}
 
 		Router_DestroyMatch(router, match);
 	}

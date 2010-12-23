@@ -31,5 +31,6 @@ def(void, AddResource, ResourceInterface *resource);
 def(bool, IsRouteMatching, StringArray *route, StringArray *path);
 def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPart);
 def(MatchingRoute, FindRoute, String path);
+def(MatchingRoute, GetDefaultRoute);
 
 #undef self
