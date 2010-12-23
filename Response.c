@@ -8,6 +8,9 @@ static def(void, Defaults) {
 
 	HTTP_Envelope_SetStatus(&this->envelope, HTTP_Status_Success_Ok);
 	HTTP_Envelope_SetContentLength(&this->envelope, 0);
+	HTTP_Envelope_SetLocation(&this->envelope, $(""));
+	HTTP_Envelope_SetContentType(&this->envelope, $(""));
+	HTTP_Envelope_SetLastModified(&this->envelope, DateTime_Empty());
 }
 
 def(void, Init) {
