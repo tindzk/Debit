@@ -1,10 +1,8 @@
 #import "TemplateResponse.h"
 
-typedef void Render(void *, String *);
-
-void TemplateResponse(ResponseInstance resp, void *ptr, void *context) {
+void TemplateResponse(ResponseInstance resp, Template tpl) {
 	String out = HeapString(0);
-	((Render *) ptr)(context, &out);
+	callback(tpl, &out);
 
 	Response_SetBufferBody(resp, out);
 	Response_SetContentType(resp, $("text/html; charset=utf-8"));

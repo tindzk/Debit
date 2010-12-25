@@ -1,5 +1,6 @@
 #import <String.h>
+#import <tplgen/Template.h>
 
 #import "Response.h"
 
-void TemplateResponse(ResponseInstance resp, void *ptr, void *context);
+void TemplateResponse(ResponseInstance resp, Template tpl);
