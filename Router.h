@@ -5,6 +5,8 @@
 
 #define self Router
 
+// @exc NestedBrackets
+
 Array(ResourceInterface *, Resources);
 
 class {

@@ -27,15 +27,81 @@ def(void, AddResource, ResourceInterface *resource) {
 	Resources_Push(&this->resources, resource);
 }
 
+static sdef(bool, IsRoot, StringArray *elems) {
+	return elems->len == 2
+		&& elems->buf[0].len == 0
+		&& elems->buf[1].len == 0;
+}
+
+static def(bool, ParseSub, String route, String path, ref(OnPart) onPart) {
+	ssize_t j = -1;
+	size_t offset = 0;
+	bool bracket = false;
+
+	String name  = $("");
+	String value = $("");
+
+	forward (i, route.len) {
+		if (bracket) {
+			if (route.buf[i] == '{') {
+				throw(NestedBrackets);
+			} else if (route.buf[i] == '}') {
+				bracket = false;
+
+				name  = String_Slice(route, offset, i - offset);
+				value = String_Slice(path, j + 1);
+			}
+		} else {
+			if (route.buf[i] == '{') {
+				bracket = true;
+				offset = i + 1;
+			} else {
+				String find = String_Slice(route, i);
+				forward (u, find.len) {
+					if (find.buf[u] == '{') {
+						find.len = u;
+					}
+				}
+
+				ssize_t pos = String_Find(path, j + 1, find);
+
+				if (pos == String_NotFound) {
+					return false;
+				}
+
+				value = String_Slice(path, j + 1, pos - j - 1);
+				callback(onPart, name, value);
+				name.len = 0;
+
+				i += find.len - 1;
+				j = pos + find.len - 1;
+			}
+		}
+	}
+
+	if (name.len > 0) {
+		callback(onPart, name, value);
+	}
+
+	return true;
+}
+
 def(bool, IsRouteMatching, StringArray *route, StringArray *path) {
 	if (route->len > path->len) {
 		return false;
 	}
 
+	/* '/' should not act as a fall-back route. */
+	if (scall(IsRoot, route) && !scall(IsRoot, path)) {
+		return false;
+	}
+
 	forward (i, route->len) {
-		if (String_BeginsWith(route->buf[i], $("$"))) {
+		if (String_BeginsWith(route->buf[i], $(":"))) {
 			continue;
-		} else if (!String_Equals(route->buf[i], path->buf[i])) {
+		}
+
+		if (!call(ParseSub, route->buf[i], path->buf[i], EmptyCallback())) {
 			return false;
 		}
 	}
@@ -45,13 +111,15 @@ def(bool, IsRouteMatching, StringArray *route, StringArray *path) {
 
 def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPart) {
 	forward (i, route->len) {
-		if (String_BeginsWith(route->buf[i], $("$"))) {
+		if (String_BeginsWith(route->buf[i], $(":"))) {
 			if (path->buf[i].len > 0) {
 				String name  = String_Slice(route->buf[i], 1);
 				String value = path->buf[i];
 
 				callback(onPart, name, value);
 			}
+		} else {
+			call(ParseSub, route->buf[i], path->buf[i], onPart);
 		}
 	}
 }
