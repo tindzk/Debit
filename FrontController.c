@@ -224,8 +224,19 @@ def(void, HandleRequest, ResponseInstance resp) {
 		 */
 
 		#undef action
+
+		if (this->route->setUp != NULL) {
+			this->route->setUp(this->instance,
+				sess, this->request, resp);
+		}
+
 		this->route->action(this->instance,
 			sess, this->request, resp);
+
+		if (this->route->tearDown != NULL) {
+			this->route->tearDown(this->instance,
+				sess, this->request, resp);
+		}
 	} else {
 		/* Authorization required. */
 		Logger_Debug(&logger, $("Authorization required"));

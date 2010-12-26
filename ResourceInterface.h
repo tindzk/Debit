@@ -75,6 +75,9 @@ record(ResourceRoute) {
 
 	/* If unspecified, the resource's role is inherited. */
 	Role role;
+
+	ResourceAction *setUp;
+	ResourceAction *tearDown;
 };
 
 Interface(Resource) {
