@@ -65,7 +65,7 @@ static def(void, Error, HTTP_Status status, String msg);
 def(void, Process) {
 	this->incomplete = true;
 
-	String fmt = HeapString(0);
+	String fmt = $("");
 
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
@@ -165,6 +165,7 @@ static def(void, OnHeader, String name, String value) {
 				items->buf[1]);
 		}
 
+		StringArray_Destroy(items);
 		StringArray_Free(items);
 	} else {
 		FrontController_SetHeader(&this->controller, name, value);
@@ -199,8 +200,9 @@ static def(void, OnFileSent,   __unused File *file);
 static def(void, OnBufferSent, __unused String *str);
 
 static def(void, OnHeadersSent, String *s) {
-	Logger_Debug(&logger, $("Response headers sent (% bytes)"),
-		Integer_ToString(s->len));
+	String size = Integer_ToString(s->len);
+	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size);
+	String_Destroy(&size);
 
 	Response_Body *body = Response_GetBody(&this->resp);
 
@@ -231,8 +233,9 @@ static def(void, OnHeadersSent, String *s) {
 }
 
 static def(void, OnBufferSent, String *str) {
-	Logger_Debug(&logger, $("Buffer sent (% bytes)"),
-		Integer_ToString(str->len));
+	String size = Integer_ToString(str->len);
+	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size);
+	String_Destroy(&size);
 
 	call(OnSent, true);
 }
@@ -276,6 +279,8 @@ static def(void, Error, HTTP_Status status, String msg) {
 
 	HTTP_Status_Item st = HTTP_Status_GetItem(status);
 
+	String strCode = Integer_ToString(st.code);
+
 	Response_SetBufferBody(&this->resp, String_Format(
 		$(
 			"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -291,10 +296,11 @@ static def(void, Error, HTTP_Status status, String msg) {
 					"</body>"
 			"</html>"),
 
-		Integer_ToString(st.code), st.msg,
-		Integer_ToString(st.code), st.msg,
-
+		strCode, st.msg,
+		strCode, st.msg,
 		msg));
+
+	String_Destroy(&strCode);
 
 	call(ProcessResponse, false);
 }

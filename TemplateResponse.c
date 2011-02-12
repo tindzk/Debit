@@ -1,7 +1,8 @@
 #import "TemplateResponse.h"
 
 void TemplateResponse(ResponseInstance resp, Template tpl) {
-	String out = HeapString(0);
+	String out = $("");
+
 	callback(tpl, &out);
 
 	Response_SetBufferBody(resp, out);

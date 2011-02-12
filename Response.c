@@ -17,14 +17,12 @@ def(void, Init) {
 	HTTP_Envelope_Init(&this->envelope);
 	call(Defaults);
 
-	this->headers = HeapString(0);
+	this->headers = String_New(0);
 }
 
 static def(void, DestroyBody) {
 	if (this->body.type == ref(BodyType_Buffer)) {
-		if (this->body.buf.mutable) {
-			String_Destroy(&this->body.buf);
-		}
+		String_Destroy(&this->body.buf);
 	} else if (this->body.type == ref(BodyType_File)) {
 		File_Close(&this->body.file.file);
 	} else if (this->body.type == ref(BodyType_Stream)) {
@@ -37,7 +35,7 @@ def(void, Reset) {
 	call(Defaults);
 
 	String_Destroy(&this->headers);
-	this->headers = HeapString(0);
+	this->headers = $("");
 }
 
 def(void, Destroy) {

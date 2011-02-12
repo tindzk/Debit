@@ -15,8 +15,8 @@ static def(void, Defaults) {
 }
 
 def(void, Init) {
-	this->request.sessionId = HeapString(0);
-	this->request.referer   = HeapString(0);
+	this->request.referer   = $("");
+	this->request.sessionId = $("");
 
 	call(Defaults);
 }
@@ -76,7 +76,6 @@ def(void, SetCookie, String name, String value) {
 }
 
 def(void, SetHeader, String name, String value) {
-	name.mutable = true;
 	String_ToLower(&name);
 
 	if (String_Equals(name, $("if-modified-since"))) {
@@ -111,7 +110,7 @@ def(String *, GetMemberAddr, String name) {
 				return Generic_GetObject(this->instance) + member->offset;
 			} else {
 				StringArray **ptr = Generic_GetObject(this->instance) + member->offset;
-				StringArray_Push(ptr, HeapString(0));
+				StringArray_Push(ptr, $(""));
 				return &(*ptr)->buf[(*ptr)->len - 1];
 			}
 		}
@@ -160,7 +159,7 @@ def(void, CreateResource) {
 			*ptr = StringArray_New(16);
 		} else {
 			String *ptr = Generic_GetObject(this->instance) + member->offset;
-			*ptr = HeapString(0);
+			*ptr = $("");
 		}
 	}
 
