@@ -22,23 +22,21 @@ void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified)
 			} else {
 				Logger_Debug(&logger, $("Sending file..."));
 
-				ProtString contentType = $("application/octet-stream");
+				ProtString ext = Path_GetExtension(path);
 
-				ssize_t pos = String_ReverseFind(path, '.');
+				Response_SetContentType(resp,
+					String_ToCarrier($("application/octet-stream")));
 
-				if (pos != String_NotFound) {
-					ProtString ext = String_Slice(path, pos + 1);
+				forward (i, MimeTypes_Length) {
+					if (String_Equals(ext, MimeTypes[i].extension)) {
+						Response_SetContentType(resp,
+							String_ToCarrier(MimeTypes[i].mimeType));
 
-					forward (i, MimeTypes_Length) {
-						if (String_Equals(ext, MimeTypes[i].extension)) {
-							contentType = MimeTypes[i].mimeType;
-							break;
-						}
+						break;
 					}
 				}
 
 				Response_SetFileBody    (resp, file, attr.size);
-				Response_SetContentType (resp, String_ToCarrier(contentType));
 				Response_SetLastModified(resp, fileTime);
 			}
 		}
