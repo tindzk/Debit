@@ -7,9 +7,11 @@
 Singleton(self);
 SingletonDestructor(self);
 
-def(void, Init) {
-	this->sessions = Sessions_New(1024);
-	this->backend  = NULL;
+rsdef(self, New) {
+	return (self) {
+		.sessions = Sessions_New(1024),
+		.backend  = NULL
+	};
 }
 
 static def(void, DestroyItem, SessionItem *item) {
@@ -58,10 +60,10 @@ def(void, DestroySession, SessionInstance sess) {
 /* TODO Use a better algorithm. */
 def(String, GetUniqueId) {
 	Time_UnixEpoch time = Time_GetCurrent();
-	return String_Clone(Integer_ToString((u32) time.sec));
+	return Integer_ToString((u32) time.sec);
 }
 
-def(String, Register, SessionInstance instance) {
+def(ProtString, Register, SessionInstance instance) {
 	Session *sess = Session_GetObject(instance);
 	sess->ref = true;
 
@@ -80,12 +82,12 @@ def(String, Register, SessionInstance instance) {
 	Sessions_Push(&this->sessions, item);
 
 out:
-	return item.id;
+	return item.id.prot;
 }
 
-def(SessionInstance, Resolve, String id) {
+def(SessionInstance, Resolve, ProtString id) {
 	foreach (sess, this->sessions) {
-		if (String_Equals(sess->id, id)) {
+		if (String_Equals(sess->id.prot, id)) {
 			return sess->instance;
 		}
 	}
@@ -93,9 +95,9 @@ def(SessionInstance, Resolve, String id) {
 	return Session_Null();
 }
 
-def(void, Unlink, String id) {
+def(void, Unlink, ProtString id) {
 	foreach (sess, this->sessions) {
-		if (String_Equals(sess->id, id)) {
+		if (String_Equals(sess->id.prot, id)) {
 			call(DestroyItem, sess);
 			sess->instance = Session_Null();
 

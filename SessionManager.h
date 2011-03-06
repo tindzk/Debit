@@ -26,13 +26,13 @@ class {
 
 SingletonPrototype(self);
 
-def(void, Init);
+rsdef(self, New);
 def(void, Destroy);
 def(void, SetBackend, BackendSessionInterface *backend);
 def(SessionInstance, CreateSession);
 def(void, DestroySession, SessionInstance sess);
-def(String, Register, SessionInstance instance);
-def(SessionInstance, Resolve, String id);
-def(void, Unlink, String id);
+def(ProtString, Register, SessionInstance instance);
+def(SessionInstance, Resolve, ProtString id);
+def(void, Unlink, ProtString id);
 
 #undef self

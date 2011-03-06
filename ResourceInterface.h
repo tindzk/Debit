@@ -47,7 +47,7 @@ typedef void (ResourceAction) (
 	}
 
 record(ResourceMember) {
-	String name;
+	ProtString name;
 	size_t offset;
 	bool array;
 };
@@ -70,7 +70,7 @@ set(Role) {
 };
 
 record(ResourceRoute) {
-	String path;
+	ProtString path;
 	ResourceAction *action;
 
 	/* If unspecified, the resource's role is inherited. */

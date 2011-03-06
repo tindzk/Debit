@@ -8,20 +8,21 @@
 #define self FrontController
 
 class {
+	Pool_Session      *memSess;
 	Request           request;
 	GenericInstance   instance;
 	ResourceRoute     *route;
 	ResourceInterface *resource;
 };
 
-def(void, Init);
+rsdef(self, New);
 def(void, Destroy);
 def(bool, HasResource);
 def(void, Reset);
-def(void, SetCookie, String name, String value);
-def(void, SetHeader, String name, String value);
-def(String *, GetMemberAddr, String name);
-def(bool, Store, String name, String value);
+def(void, SetCookie, ProtString name, ProtString value);
+def(void, SetHeader, ProtString name, ProtString value);
+def(String *, GetMemberAddr, ProtString name);
+def(bool, Store, ProtString name, ProtString value);
 def(void, SetMethod, HTTP_Method method);
 def(void, SetRoute, ResourceRoute *route);
 def(void, SetResource, ResourceInterface *resource);

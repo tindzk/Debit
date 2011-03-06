@@ -3,8 +3,7 @@
 #define self Session
 
 sdef(SessionInstance, New, size_t data) {
-	Session *ptr = Memory_Alloc(sizeof(self) + data);
-	return (SessionInstance) ptr;
+	return (SessionInstance) Generic_New(sizeof(self) + data);
 }
 
 def(void, Init) {

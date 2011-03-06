@@ -2,4 +2,5 @@
 
 #import "Response.h"
 
-void BufferResponse(ResponseInstance resp, String buf);
+overload void BufferResponse(ResponseInstance resp, String buf);
+overload void BufferResponse(ResponseInstance resp, ProtString buf);

@@ -2,7 +2,7 @@
 
 extern Logger logger;
 
-void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
+void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified) {
 	try {
 		File file;
 		File_Open(&file, path, FileStatus_ReadOnly);
@@ -22,12 +22,12 @@ void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
 			} else {
 				Logger_Debug(&logger, $("Sending file..."));
 
-				String contentType = $("application/octet-stream");
+				ProtString contentType = $("application/octet-stream");
 
 				ssize_t pos = String_ReverseFind(path, '.');
 
 				if (pos != String_NotFound) {
-					String ext = String_Slice(path, pos + 1);
+					ProtString ext = String_Slice(path, pos + 1);
 
 					forward (i, MimeTypes_Length) {
 						if (String_Equals(ext, MimeTypes[i].extension)) {
@@ -38,7 +38,7 @@ void FileResponse(ResponseInstance resp, String path, DateTime lastModified) {
 				}
 
 				Response_SetFileBody    (resp, file, attr.size);
-				Response_SetContentType (resp, contentType);
+				Response_SetContentType (resp, String_ToCarrier(contentType));
 				Response_SetLastModified(resp, fileTime);
 			}
 		}

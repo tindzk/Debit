@@ -5,8 +5,10 @@
 Singleton(self);
 SingletonDestructor(self);
 
-def(void, Init) {
-	this->resources = Resources_New(75);
+rsdef(self, New) {
+	return (self) {
+		.resources = Resources_New(75)
+	};
 }
 
 def(void, Destroy) {
@@ -15,11 +17,11 @@ def(void, Destroy) {
 
 def(void, DestroyMatch, MatchingRoute match) {
 	if (match.pathElems != NULL) {
-		StringArray_Free(match.pathElems);
+		ProtStringArray_Free(match.pathElems);
 	}
 
 	if (match.routeElems != NULL) {
-		StringArray_Free(match.routeElems);
+		ProtStringArray_Free(match.routeElems);
 	}
 }
 
@@ -27,19 +29,19 @@ def(void, AddResource, ResourceInterface *resource) {
 	Resources_Push(&this->resources, resource);
 }
 
-static sdef(bool, IsRoot, StringArray *elems) {
+static sdef(bool, IsRoot, ProtStringArray *elems) {
 	return elems->len == 2
 		&& elems->buf[0].len == 0
 		&& elems->buf[1].len == 0;
 }
 
-static def(bool, ParseSub, String route, String path, ref(OnPart) onPart) {
+static def(bool, ParseSub, ProtString route, ProtString path, ref(OnPart) onPart) {
 	ssize_t j = -1;
 	size_t offset = 0;
 	bool bracket = false;
 
-	String name  = $("");
-	String value = $("");
+	ProtString name  = $("");
+	ProtString value = $("");
 
 	forward (i, route.len) {
 		if (bracket) {
@@ -56,7 +58,7 @@ static def(bool, ParseSub, String route, String path, ref(OnPart) onPart) {
 				bracket = true;
 				offset = i + 1;
 			} else {
-				String find = String_Slice(route, i);
+				ProtString find = String_Slice(route, i);
 				forward (u, find.len) {
 					if (find.buf[u] == '{') {
 						find.len = u;
@@ -86,7 +88,7 @@ static def(bool, ParseSub, String route, String path, ref(OnPart) onPart) {
 	return true;
 }
 
-def(bool, IsRouteMatching, StringArray *route, StringArray *path) {
+def(bool, IsRouteMatching, ProtStringArray *route, ProtStringArray *path) {
 	if (route->len > path->len) {
 		return false;
 	}
@@ -109,12 +111,12 @@ def(bool, IsRouteMatching, StringArray *route, StringArray *path) {
 	return true;
 }
 
-def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPart) {
+def(void, ExtractParts, ProtStringArray *route, ProtStringArray *path, ref(OnPart) onPart) {
 	forward (i, route->len) {
 		if (String_BeginsWith(route->buf[i], $(":"))) {
 			if (path->buf[i].len > 0) {
-				String name  = String_Slice(route->buf[i], 1);
-				String value = path->buf[i];
+				ProtString name  = String_Slice(route->buf[i], 1);
+				ProtString value = path->buf[i];
 
 				callback(onPart, name, value);
 			}
@@ -125,8 +127,8 @@ def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPar
 }
 
 /* Finds a matching route. */
-def(MatchingRoute, FindRoute, String path) {
-	StringArray *arrPath = String_Split(path, '/');
+def(MatchingRoute, FindRoute, ProtString path) {
+	ProtStringArray *arrPath = String_Split(path, '/');
 
 	forward (i, this->resources->len) {
 		ResourceInterface *resource = this->resources->buf[i];
@@ -138,7 +140,7 @@ def(MatchingRoute, FindRoute, String path) {
 				break;
 			}
 
-			StringArray *arrRoute = String_Split(route->path, '/');
+			ProtStringArray *arrRoute = String_Split(route->path, '/');
 
 			if (call(IsRouteMatching, arrRoute, arrPath)) {
 				MatchingRoute match = {
@@ -151,11 +153,11 @@ def(MatchingRoute, FindRoute, String path) {
 				return match;
 			}
 
-			StringArray_Free(arrRoute);
+			ProtStringArray_Free(arrRoute);
 		}
 	}
 
-	StringArray_Free(arrPath);
+	ProtStringArray_Free(arrPath);
 
 	return (MatchingRoute) { .route = NULL };
 }

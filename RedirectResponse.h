@@ -2,4 +2,5 @@
 
 #import "Response.h"
 
-void RedirectResponse(ResponseInstance resp, String location);
+overload void RedirectResponse(ResponseInstance resp, String location);
+overload void RedirectResponse(ResponseInstance resp, ProtString location);

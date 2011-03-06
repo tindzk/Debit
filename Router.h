@@ -14,25 +14,25 @@ class {
 };
 
 record(MatchingRoute) {
-	StringArray *pathElems;
-	StringArray *routeElems;
+	ProtStringArray *pathElems;
+	ProtStringArray *routeElems;
 
 	ResourceRoute *route;
 
 	ResourceInterface *resource;
 };
 
-DefineCallback(ref(OnPart), void, String name, String value);
+DefineCallback(ref(OnPart), void, ProtString name, ProtString value);
 
 SingletonPrototype(self);
 
-def(void, Init);
+rsdef(self, New);
 def(void, Destroy);
 def(void, DestroyMatch, MatchingRoute match);
 def(void, AddResource, ResourceInterface *resource);
-def(bool, IsRouteMatching, StringArray *route, StringArray *path);
-def(void, ExtractParts, StringArray *route, StringArray *path, ref(OnPart) onPart);
-def(MatchingRoute, FindRoute, String path);
+def(bool, IsRouteMatching, ProtStringArray *route, ProtStringArray *path);
+def(void, ExtractParts, ProtStringArray *route, ProtStringArray *path, ref(OnPart) onPart);
+def(MatchingRoute, FindRoute, ProtString path);
 def(MatchingRoute, GetDefaultRoute);
 
 #undef self

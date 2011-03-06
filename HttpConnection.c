@@ -19,12 +19,12 @@ class {
 	FrontController controller;
 };
 
-static def(void, OnHeader, String name, String value);
+static def(void, OnHeader, ProtString name, ProtString value);
 static def(void, OnVersion, HTTP_Version version);
 static def(void, OnMethod, HTTP_Method method);
-static def(void, OnPath, String path);
-static def(String *, OnQueryParameter, String name);
-static def(String *, OnBodyParameter, String name);
+static def(void, OnPath, ProtString path);
+static def(String *, OnQueryParameter, ProtString name);
+static def(String *, OnBodyParameter, ProtString name);
 static def(void, OnRespond, bool persistent);
 
 def(void, Init, SocketConnection *conn) {
@@ -32,12 +32,9 @@ def(void, Init, SocketConnection *conn) {
 	this->version    = HTTP_Version_1_0;
 	this->incomplete = true;
 	this->replied    = false;
-
-	FrontController_Init(&this->controller);
-
-	SocketSession_Init(&this->session, conn);
-
-	HTTP_Server_Init(&this->server, conn, 2048, 4096);
+	this->controller = FrontController_New();
+	this->session    = SocketSession_New(conn);
+	this->server     = HTTP_Server_New(conn, 2048, 4096);
 
 	HTTP_Server_BindHeader(&this->server, Callback(this, ref(OnHeader)));
 	HTTP_Server_BindVersion(&this->server, Callback(this, ref(OnVersion)));
@@ -49,23 +46,23 @@ def(void, Init, SocketConnection *conn) {
 
 	Logger_Debug(&logger, $("Connection initialized"));
 
-	Response_Init(&this->resp);
+	this->resp = Response_New();
 }
 
 def(void, Destroy) {
 	Logger_Debug(&logger, $("Connection destroyed"));
 	HTTP_Server_Destroy(&this->server);
-	FrontController_Destroy(&this->controller);
-
 	Response_Destroy(&this->resp);
+
+	FrontController_Destroy(&this->controller);
 }
 
-static def(void, Error, HTTP_Status status, String msg);
+static def(void, Error, HTTP_Status status, ProtString msg);
 
 def(void, Process) {
 	this->incomplete = true;
 
-	String fmt = $("");
+	String fmt = String_New(0);
 
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
@@ -82,7 +79,7 @@ def(void, Process) {
 		fmt = String_Format(
 			$("Body not expected with method '%'."),
 			HTTP_Method_ToString(this->method));
-		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt);
+		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt.prot);
 	} catch(HTTP_Header, RequestMalformed) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Request malformed."));
@@ -116,7 +113,7 @@ static def(void, OnMethod, HTTP_Method method) {
 }
 
 /* Parameters to extract from URL. */
-static def(void, OnPath, String path) {
+static def(void, OnPath, ProtString path) {
 	Response_Reset(&this->resp);
 	FrontController_Reset(&this->controller);
 
@@ -153,11 +150,11 @@ static def(void, OnPath, String path) {
 	}
 }
 
-static def(void, OnHeader, String name, String value) {
+static def(void, OnHeader, ProtString name, ProtString value) {
 	Logger_Debug(&logger, $("Header: % = %"), name, value);
 
 	if (String_Equals(name, $("Cookie"))) {
-		StringArray *items = String_Split(value, '=');
+		ProtStringArray *items = String_Split(value, '=');
 
 		if (items->len > 1) {
 			FrontController_SetCookie(&this->controller,
@@ -165,20 +162,19 @@ static def(void, OnHeader, String name, String value) {
 				items->buf[1]);
 		}
 
-		StringArray_Destroy(items);
-		StringArray_Free(items);
+		ProtStringArray_Free(items);
 	} else {
 		FrontController_SetHeader(&this->controller, name, value);
 	}
 }
 
-static def(String *, OnQueryParameter, String name) {
+static def(String *, OnQueryParameter, ProtString name) {
 	Logger_Debug(&logger, $("Received GET parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
 }
 
-static def(String *, OnBodyParameter, String name) {
+static def(String *, OnBodyParameter, ProtString name) {
 	Logger_Debug(&logger, $("Received POST parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
@@ -197,18 +193,18 @@ static def(void, OnSent, bool flush) {
 }
 
 static def(void, OnFileSent,   __unused File *file);
-static def(void, OnBufferSent, __unused String *str);
+static def(void, OnBufferSent, __unused ProtString *str);
 
-static def(void, OnHeadersSent, String *s) {
+static def(void, OnHeadersSent, ProtString *s) {
 	String size = Integer_ToString(s->len);
-	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size);
+	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size.prot);
 	String_Destroy(&size);
 
 	Response_Body *body = Response_GetBody(&this->resp);
 
 	switch (body->type) {
 		case (Response_BodyType_Buffer):
-			SocketSession_Write(&this->session, body->buf,
+			SocketSession_Write(&this->session, body->buf.prot,
 				Callback(this, ref(OnBufferSent)));
 
 			break;
@@ -232,9 +228,9 @@ static def(void, OnHeadersSent, String *s) {
 	}
 }
 
-static def(void, OnBufferSent, String *str) {
+static def(void, OnBufferSent, ProtString *str) {
 	String size = Integer_ToString(str->len);
-	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size);
+	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size.prot);
 	String_Destroy(&size);
 
 	call(OnSent, true);
@@ -264,13 +260,13 @@ static def(void, OnRespond, bool persistent) {
 			HTTP_Status_ClientError_NotFound);
 
 		Response_SetBufferBody(&this->resp,
-			$("Sorry, no matching route found"));
+			String_ToCarrier($("Sorry, no matching route found")));
 	}
 
 	call(ProcessResponse, persistent);
 }
 
-static def(void, Error, HTTP_Status status, String msg) {
+static def(void, Error, HTTP_Status status, ProtString msg) {
 	this->incomplete = false;
 
 	Logger_Error(&logger, $("Client error: %"), msg);
@@ -281,7 +277,7 @@ static def(void, Error, HTTP_Status status, String msg) {
 
 	String strCode = Integer_ToString(st.code);
 
-	Response_SetBufferBody(&this->resp, String_Format(
+	Response_SetBufferBody(&this->resp, String_ToCarrier(String_Format(
 		$(
 			"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 			"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" "
@@ -296,9 +292,9 @@ static def(void, Error, HTTP_Status status, String msg) {
 					"</body>"
 			"</html>"),
 
-		strCode, st.msg,
-		strCode, st.msg,
-		msg));
+		strCode.prot, st.msg,
+		strCode.prot, st.msg,
+		msg)));
 
 	String_Destroy(&strCode);
 

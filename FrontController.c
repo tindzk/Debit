@@ -14,11 +14,17 @@ static def(void, Defaults) {
 	this->request.sessionId.len = 0;
 }
 
-def(void, Init) {
-	this->request.referer   = $("");
-	this->request.sessionId = $("");
+rsdef(self, New) {
+	self res;
 
-	call(Defaults);
+	res.request.referer   = String_New(0);
+	res.request.sessionId = String_New(0);
+
+	scall(Defaults, &res);
+
+	res.memSess = Pool_CreateSession(Pool_GetInstance(), $("FrontController"));
+
+	return res;
 }
 
 static def(void, DestroyResource) {
@@ -49,12 +55,25 @@ static def(void, DestroyResource) {
 }
 
 def(void, Destroy) {
+	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource destruction"));
+
 	if (this->resource != NULL) {
 		call(DestroyResource);
 	}
 
 	String_Destroy(&this->request.referer);
 	String_Destroy(&this->request.sessionId);
+
+	Pool_Pop(Pool_GetInstance(), this->memSess);
+
+	size_t deficit = Pool_Dispose(Pool_GetInstance(), this->memSess);
+
+	if (deficit > 0) {
+		String strDeficit = Integer_ToString(deficit);
+		Logger_Error(&logger, $("Allocation deficit is % bytes."),
+			strDeficit.prot);
+		String_Destroy(&strDeficit);
+	}
 }
 
 def(bool, HasResource) {
@@ -62,21 +81,25 @@ def(bool, HasResource) {
 }
 
 def(void, Reset) {
+	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource destruction"));
+
 	if (this->resource != NULL) {
 		call(DestroyResource);
 	}
 
+	Pool_Pop(Pool_GetInstance(), this->memSess);
+
 	call(Defaults);
 }
 
-def(void, SetCookie, String name, String value) {
+def(void, SetCookie, ProtString name, ProtString value) {
 	if (String_Equals(name, $("Session-ID"))) {
 		String_Copy(&this->request.sessionId, value);
 	}
 }
 
-def(void, SetHeader, String name, String value) {
-	String_ToLower(&name);
+def(void, SetHeader, ProtString name, ProtString value) {
+	String_ToLower((String *) &name);
 
 	if (String_Equals(name, $("if-modified-since"))) {
 		this->request.lastModified = Date_RFC822_Parse(value);
@@ -85,7 +108,7 @@ def(void, SetHeader, String name, String value) {
 	}
 }
 
-static def(ResourceMember *, ResolveMember, String name) {
+static def(ResourceMember *, ResolveMember, ProtString name) {
 	forward (i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
@@ -101,7 +124,7 @@ static def(ResourceMember *, ResolveMember, String name) {
 	return NULL;
 }
 
-def(String *, GetMemberAddr, String name) {
+def(String *, GetMemberAddr, ProtString name) {
 	if (call(HasResource)) {
 		ResourceMember *member = call(ResolveMember, name);
 
@@ -110,7 +133,7 @@ def(String *, GetMemberAddr, String name) {
 				return Generic_GetObject(this->instance) + member->offset;
 			} else {
 				StringArray **ptr = Generic_GetObject(this->instance) + member->offset;
-				StringArray_Push(ptr, $(""));
+				StringArray_Push(ptr, String_New(0));
 				return &(*ptr)->buf[(*ptr)->len - 1];
 			}
 		}
@@ -119,7 +142,7 @@ def(String *, GetMemberAddr, String name) {
 	return NULL;
 }
 
-def(bool, Store, String name, String value) {
+def(bool, Store, ProtString name, ProtString value) {
 	String *s = call(GetMemberAddr, name);
 
 	if (s != NULL) {
@@ -143,6 +166,8 @@ def(void, SetResource, ResourceInterface *resource) {
 }
 
 def(void, CreateResource) {
+	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource creation"));
+
 	this->instance = (this->resource->size > 0)
 		? Generic_New(this->resource->size)
 		: Generic_Null();
@@ -159,13 +184,15 @@ def(void, CreateResource) {
 			*ptr = StringArray_New(16);
 		} else {
 			String *ptr = Generic_GetObject(this->instance) + member->offset;
-			*ptr = $("");
+			*ptr = String_New(0);
 		}
 	}
 
 	if (this->resource->init != NULL) {
 		this->resource->init(this->instance);
 	}
+
+	Pool_Pop(Pool_GetInstance(), this->memSess);
 }
 
 def(void, HandleRequest, ResponseInstance resp) {
@@ -183,7 +210,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	if (this->request.sessionId.len > 0) {
 		Logger_Debug(&logger, $("Client has session ID is '%'"),
-			this->request.sessionId);
+			this->request.sessionId.prot);
 	}
 
 	SessionInstance sess;
@@ -196,7 +223,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		 * empty session object.
 		 */
 		SessionInstance res = SessionManager_Resolve(sessMgr,
-			this->request.sessionId);
+			this->request.sessionId.prot);
 
 		if (Session_IsNull(res)) {
 			sess = SessionManager_CreateSession(sessMgr);
@@ -208,7 +235,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 	/* The user was logged in but his last activity is too long ago. */
 	if (Session_IsExpired(sess)) {
 		Logger_Debug(&logger, $("Session is expired"));
-		SessionManager_Unlink(sessMgr, this->request.sessionId);
+		SessionManager_Unlink(sessMgr, this->request.sessionId.prot);
 
 		/* This resets the whole object, including its ID. But this
 		 * sets hasChanged to true so that we the ID in the HTTP
@@ -216,6 +243,8 @@ def(void, HandleRequest, ResponseInstance resp) {
 		 */
 		Session_Reset(sess);
 	}
+
+	Pool_Push(Pool_GetInstance(), this->memSess, $("Request dispatching"));
 
 	if (this->route->role == Role_Guest /* || Session_IsUser(sess) */) {
 		/* Rule doesn't require user role or client is already
@@ -241,12 +270,16 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Logger_Debug(&logger, $("Authorization required"));
 	}
 
+	Pool_Pop(Pool_GetInstance(), this->memSess);
+
 	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
 		/* Map the session to an ID... */
-		String id = SessionManager_Register(sessMgr, sess);
+		ProtString id = SessionManager_Register(sessMgr, sess);
 
 		/* ...and update the cookie accordingly. */
-		Response_SetCookie(resp, $("Session-ID"), id);
+		Response_SetCookie(resp,
+			String_ToCarrier($("Session-ID")),
+			String_ToCarrier(id));
 	}
 
 	if (Session_IsReferenced(sess)) {

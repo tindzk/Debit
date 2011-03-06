@@ -20,34 +20,32 @@ record(ref(Body)) {
 			u64  size;
 		} file;
 
-		String buf;
+		CarrierString buf;
 	};
 };
 
 class {
 	HTTP_Version version;
 	ref(Body) body;
+	CarrierString headers;
 	HTTP_Envelope envelope;
-	String headers;
 };
 
-ExtendClass;
-
-def(void, Init);
+rsdef(self, New);
 def(void, Reset);
 def(void, Destroy);
 def(void, SetVersion, HTTP_Version version);
 def(void, SetStatus, HTTP_Status status);
 def(bool, IsStream);
 def(bool, IsPersistent);
-def(void, SetCookie, String name, String value);
-def(void, SetLocation, String path);
+def(void, SetCookie, CarrierString name, CarrierString value);
+def(void, SetLocation, CarrierString path);
 def(void, SetLastModified, DateTime lastModified);
 def(void, SetFileBody, File file, u64 size);
-def(void, SetBufferBody, String buf);
-def(void, SetContentType, String contentType);
+def(void, SetBufferBody, CarrierString buf);
+def(void, SetContentType, CarrierString contentType);
 def(void, Process, bool persistent);
-def(ref(Body) *, GetBody);
-def(String, GetHeaders);
+rdef(ref(Body) *, GetBody);
+rdef(ProtString, GetHeaders);
 
 #undef self
