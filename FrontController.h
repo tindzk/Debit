@@ -2,6 +2,7 @@
 #import <Logger.h>
 
 #import "Response.h"
+#import "BufferResponse.h"
 #import "SessionManager.h"
 #import "ResourceInterface.h"
 

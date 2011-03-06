@@ -258,8 +258,22 @@ def(void, HandleRequest, ResponseInstance resp) {
 				sess, this->request, resp);
 		}
 
-		this->route->action(this->instance,
-			sess, this->request, resp);
+		try {
+			this->route->action(this->instance,
+				sess, this->request, resp);
+		} clean catchAny {
+			String fmt = Exception_Format(e);
+			Logger_Debug(&logger, fmt.prot);
+			BufferResponse(resp, fmt);
+
+#if Exception_SaveTrace
+			Backtrace_PrintTrace(
+				Exception_GetTraceBuffer(),
+				Exception_GetTraceLength());
+#endif
+		} finally {
+
+		} tryEnd;
 
 		if (this->route->tearDown != NULL) {
 			this->route->tearDown(this->instance,
