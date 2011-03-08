@@ -261,7 +261,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		try {
 			this->route->action(this->instance,
 				sess, this->request, resp);
-		} clean catchAny {
+		} catchAny {
 			String fmt = Exception_Format(e);
 			Logger_Debug(&logger, fmt.prot);
 			BufferResponse(resp, fmt);

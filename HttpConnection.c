@@ -66,7 +66,7 @@ def(void, Process) {
 
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
-	} clean catch(HTTP_Query, ExceedsPermittedLength) {
+	} catch(HTTP_Query, ExceedsPermittedLength) {
 		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
 			$("A parameter exceeds its permitted length."));
 	} catch(HTTP_Header, UnknownVersion) {
