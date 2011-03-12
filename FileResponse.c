@@ -40,7 +40,7 @@ void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified)
 				Response_SetLastModified(resp, fileTime);
 			}
 		}
-	} clean catch(File, NotFound) {
+	} catch(File, NotFound) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
 		BufferResponse(resp, $("File not found."));
 		Logger_Error(&logger, $("File not found."));

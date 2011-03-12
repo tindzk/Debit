@@ -55,16 +55,12 @@ static def(void, DestroyResource) {
 }
 
 def(void, Destroy) {
-	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource destruction"));
-
 	if (this->resource != NULL) {
 		call(DestroyResource);
 	}
 
 	String_Destroy(&this->request.referer);
 	String_Destroy(&this->request.sessionId);
-
-	Pool_Pop(Pool_GetInstance(), this->memSess);
 
 	size_t deficit = Pool_Dispose(Pool_GetInstance(), this->memSess);
 
@@ -81,13 +77,9 @@ def(bool, HasResource) {
 }
 
 def(void, Reset) {
-	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource destruction"));
-
 	if (this->resource != NULL) {
 		call(DestroyResource);
 	}
-
-	Pool_Pop(Pool_GetInstance(), this->memSess);
 
 	call(Defaults);
 }
@@ -166,7 +158,7 @@ def(void, SetResource, ResourceInterface *resource) {
 }
 
 def(void, CreateResource) {
-	Pool_Push(Pool_GetInstance(), this->memSess, $("Resource creation"));
+	Pool_Session *old = Pool_SetSession(Pool_GetInstance(), this->memSess);
 
 	this->instance = (this->resource->size > 0)
 		? Generic_New(this->resource->size)
@@ -192,7 +184,7 @@ def(void, CreateResource) {
 		this->resource->init(this->instance);
 	}
 
-	Pool_Pop(Pool_GetInstance(), this->memSess);
+	(void) Pool_SetSession(Pool_GetInstance(), old);
 }
 
 def(void, HandleRequest, ResponseInstance resp) {
@@ -244,7 +236,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Session_Reset(sess);
 	}
 
-	Pool_Push(Pool_GetInstance(), this->memSess, $("Request dispatching"));
+	Pool_Session *old = Pool_SetSession(Pool_GetInstance(), this->memSess);
 
 	if (this->route->role == Role_Guest /* || Session_IsUser(sess) */) {
 		/* Rule doesn't require user role or client is already
@@ -284,7 +276,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Logger_Debug(&logger, $("Authorization required"));
 	}
 
-	Pool_Pop(Pool_GetInstance(), this->memSess);
+	(void) Pool_SetSession(Pool_GetInstance(), old);
 
 	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
 		/* Map the session to an ID... */

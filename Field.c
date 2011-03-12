@@ -26,7 +26,7 @@ ProtString Field_GetValue(ProtString val, ProtString field, FormErrors **err) {
 		type res = 0;                                                          \
 		try {                                                                  \
 			res = full##_Parse(val);                                           \
-		} clean catch(Integer, Underflow) {                                    \
+		} catch(Integer, Underflow) {                                          \
 			if (err) FormErrors_Push(err,                                      \
 				(FormError) {                                                  \
 					.field = field,                                            \
