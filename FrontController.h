@@ -9,7 +9,6 @@
 #define self FrontController
 
 class {
-	Pool_Session      *memSess;
 	Request           request;
 	GenericInstance   instance;
 	ResourceRoute     *route;

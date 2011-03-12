@@ -22,8 +22,6 @@ rsdef(self, New) {
 
 	scall(Defaults, &res);
 
-	res.memSess = Pool_CreateSession(Pool_GetInstance(), $("FrontController"));
-
 	return res;
 }
 
@@ -61,15 +59,6 @@ def(void, Destroy) {
 
 	String_Destroy(&this->request.referer);
 	String_Destroy(&this->request.sessionId);
-
-	size_t deficit = Pool_Dispose(Pool_GetInstance(), this->memSess);
-
-	if (deficit > 0) {
-		String strDeficit = Integer_ToString(deficit);
-		Logger_Error(&logger, $("Allocation deficit is % bytes."),
-			strDeficit.prot);
-		String_Destroy(&strDeficit);
-	}
 }
 
 def(bool, HasResource) {
@@ -158,8 +147,6 @@ def(void, SetResource, ResourceInterface *resource) {
 }
 
 def(void, CreateResource) {
-	Pool_Session *old = Pool_SetSession(Pool_GetInstance(), this->memSess);
-
 	this->instance = (this->resource->size > 0)
 		? Generic_New(this->resource->size)
 		: Generic_Null();
@@ -183,8 +170,6 @@ def(void, CreateResource) {
 	if (this->resource->init != NULL) {
 		this->resource->init(this->instance);
 	}
-
-	(void) Pool_SetSession(Pool_GetInstance(), old);
 }
 
 def(void, HandleRequest, ResponseInstance resp) {
@@ -236,8 +221,6 @@ def(void, HandleRequest, ResponseInstance resp) {
 		Session_Reset(sess);
 	}
 
-	Pool_Session *old = Pool_SetSession(Pool_GetInstance(), this->memSess);
-
 	if (this->route->role == Role_Guest /* || Session_IsUser(sess) */) {
 		/* Rule doesn't require user role or client is already
 		 * authorized.
@@ -275,8 +258,6 @@ def(void, HandleRequest, ResponseInstance resp) {
 		/* Authorization required. */
 		Logger_Debug(&logger, $("Authorization required"));
 	}
-
-	(void) Pool_SetSession(Pool_GetInstance(), old);
 
 	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
 		/* Map the session to an ID... */
