@@ -53,7 +53,7 @@ DefineGetInt(s32,  Int32);
 DefineGetInt(u32, UInt32);
 
 bool Field_IsSurroundedBySpaces(RdString s) {
-	forward (i, s.len) {
+	fwd(i, s.len) {
 		if (Char_IsSpace(s.buf[i])) {
 			return true;
 		} else {
@@ -61,7 +61,7 @@ bool Field_IsSurroundedBySpaces(RdString s) {
 		}
 	}
 
-	reverse (i, s.len) {
+	bwd(i, s.len) {
 		if (Char_IsSpace(s.buf[i])) {
 			return true;
 		} else {

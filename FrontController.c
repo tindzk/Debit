@@ -145,9 +145,7 @@ def(void, SetResource, ResourceInterface *resource) {
 }
 
 def(void, CreateResource) {
-	this->instance = (this->resource->size > 0)
-		? Generic_New(this->resource->size)
-		: Generic_Null();
+	this->instance = Generic_New(this->resource->size);
 
 	fwd(i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
