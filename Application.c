@@ -20,7 +20,36 @@ def(bool, StartServer, Server *server, ClientListener listener) {
 override def(void, OnInit)    { }
 override def(void, OnDestroy) { }
 
+def(void, ListRoutes) {
+	Logger_Debug(&this->logger, $("Registered resources:"));
+
+	RouterInstance router = Router_GetInstance();
+
+	Resources *resources = Router_GetResources(router);
+
+	fwd(i, resources->len) {
+		ResourceInterface *resource = resources->buf[i];
+
+		Logger_Debug(&this->logger, $("* %"),
+			(resource->name.len == 0)
+				? $("<unnamed>")
+				: resource->name);
+
+		fwd(j, ResourceInterface_MaxRoutes) {
+			ResourceRoute *route = &resource->routes[j];
+
+			if (route->path.len == 0) {
+				break;
+			}
+
+			Logger_Debug(&this->logger, $("  - %"), route->path);
+		}
+	}
+}
+
 def(bool, Run) {
+	call(ListRoutes);
+
 	GenericClientListener listener;
 	GenericClientListener_Init(&listener, HttpConnection_GetImpl(), &this->logger);
 

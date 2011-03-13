@@ -100,7 +100,9 @@ record(ResourceRoute) {
 
 Interface(Resource) {
 	Role role;
-	size_t size;
+
+	size_t   size;
+	RdString name;
 
 	ResourceInit    *init;
 	ResourceDestroy *destroy;

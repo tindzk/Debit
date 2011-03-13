@@ -25,6 +25,10 @@ def(void, DestroyMatch, MatchingRoute match) {
 	}
 }
 
+def(Resources *, GetResources) {
+	return this->resources;
+}
+
 def(void, AddResource, ResourceInterface *resource) {
 	Resources_Push(&this->resources, resource);
 }

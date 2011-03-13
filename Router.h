@@ -29,6 +29,7 @@ SingletonPrototype(self);
 rsdef(self, New);
 def(void, Destroy);
 def(void, DestroyMatch, MatchingRoute match);
+def(Resources *, GetResources);
 def(void, AddResource, ResourceInterface *resource);
 def(bool, IsRouteMatching, RdStringArray *route, RdStringArray *path);
 def(void, ExtractParts, RdStringArray *route, RdStringArray *path, ref(OnPart) onPart);
