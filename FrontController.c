@@ -9,16 +9,16 @@ static def(void, Defaults) {
 	this->resource = NULL;
 	this->instance = Generic_Null();
 
-	this->request.lastModified  = Date_RFC822_Empty();
-	this->request.referer.len   = 0;
-	this->request.sessionId.len = 0;
+	this->request.priv.lastModified  = Date_RFC822_Empty();
+	this->request.priv.referer.len   = 0;
+	this->request.priv.sessionId.len = 0;
 }
 
 rsdef(self, New) {
 	self res;
 
-	res.request.referer   = String_New(0);
-	res.request.sessionId = String_New(0);
+	res.request.priv.referer   = String_New(0);
+	res.request.priv.sessionId = String_New(0);
 
 	scall(Defaults, &res);
 
@@ -57,8 +57,8 @@ def(void, Destroy) {
 		call(DestroyResource);
 	}
 
-	String_Destroy(&this->request.referer);
-	String_Destroy(&this->request.sessionId);
+	String_Destroy(&this->request.priv.referer);
+	String_Destroy(&this->request.priv.sessionId);
 }
 
 def(bool, HasResource) {
@@ -75,7 +75,7 @@ def(void, Reset) {
 
 def(void, SetCookie, RdString name, RdString value) {
 	if (String_Equals(name, $("Session-ID"))) {
-		String_Copy(&this->request.sessionId, value);
+		String_Copy(&this->request.priv.sessionId, value);
 	}
 }
 
@@ -83,9 +83,9 @@ def(void, SetHeader, RdString name, RdString value) {
 	String_ToLower((String *) &name);
 
 	if (String_Equals(name, $("if-modified-since"))) {
-		this->request.lastModified = Date_RFC822_Parse(value);
+		this->request.priv.lastModified = Date_RFC822_Parse(value);
 	} else if (String_Equals(name, $("referer"))) {
-		String_Copy(&this->request.referer, value);
+		String_Copy(&this->request.priv.referer, value);
 	}
 }
 
@@ -135,7 +135,7 @@ def(bool, Store, RdString name, RdString value) {
 }
 
 def(void, SetMethod, HTTP_Method method) {
-	this->request.method = method;
+	this->request.priv.method = method;
 }
 
 def(void, SetRoute, ResourceRoute *route) {
@@ -185,14 +185,14 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	SessionManagerInstance sessMgr = SessionManager_GetInstance();
 
-	if (this->request.sessionId.len > 0) {
+	if (this->request.priv.sessionId.len > 0) {
 		Logger_Debug(&logger, $("Client has session ID is '%'"),
-			this->request.sessionId.rd);
+			this->request.priv.sessionId.rd);
 	}
 
 	SessionInstance sess;
 
-	if (this->request.sessionId.len == 0) {
+	if (this->request.priv.sessionId.len == 0) {
 		/* Initialize the session but don't map it to an ID, yet. */
 		sess = SessionManager_CreateSession(sessMgr);
 	} else {
@@ -200,7 +200,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		 * empty session object.
 		 */
 		SessionInstance res = SessionManager_Resolve(sessMgr,
-			this->request.sessionId.rd);
+			this->request.priv.sessionId.rd);
 
 		if (Session_IsNull(res)) {
 			sess = SessionManager_CreateSession(sessMgr);
@@ -212,7 +212,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 	/* The user was logged in but his last activity is too long ago. */
 	if (Session_IsExpired(sess)) {
 		Logger_Debug(&logger, $("Session is expired"));
-		SessionManager_Unlink(sessMgr, this->request.sessionId.rd);
+		SessionManager_Unlink(sessMgr, this->request.priv.sessionId.rd);
 
 		/* This resets the whole object, including its ID. But this
 		 * sets hasChanged to true so that we the ID in the HTTP

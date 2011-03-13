@@ -14,11 +14,29 @@
 #endif
 
 record(Request) {
-	String referer;
-	String sessionId;
-	HTTP_Method method;
-	Date_RFC822 lastModified;
+	struct {
+		String referer;
+		String sessionId;
+		HTTP_Method method;
+		Date_RFC822 lastModified;
+	} priv;
 };
+
+static alwaysInline RdString Request_GetReferer(Request req) {
+	return req.priv.referer.rd;
+}
+
+static alwaysInline RdString Request_GetSessionId(Request req) {
+	return req.priv.sessionId.rd;
+}
+
+static alwaysInline HTTP_Method Request_GetMethod(Request req) {
+	return req.priv.method;
+}
+
+static alwaysInline Date_RFC822 Request_GetLastModified(Request req) {
+	return req.priv.lastModified;
+}
 
 typedef void (ResourceInit)   (GenericInstance);
 typedef void (ResourceDestroy)(GenericInstance);
