@@ -20,7 +20,7 @@ static def(void, DestroyItem, SessionItem *item) {
 }
 
 def(void, Destroy) {
-	foreach (sess, this->sessions) {
+	each(sess, this->sessions) {
 		call(DestroyItem, sess);
 	}
 
@@ -72,7 +72,7 @@ def(RdString, Register, SessionInstance instance) {
 		.instance = instance
 	};
 
-	foreach (sess, this->sessions) {
+	each(sess, this->sessions) {
 		if (Session_IsNull(sess->instance)) {
 			*sess = item;
 			goto out;
@@ -86,7 +86,7 @@ out:
 }
 
 def(SessionInstance, Resolve, RdString id) {
-	foreach (sess, this->sessions) {
+	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
 			return sess->instance;
 		}
@@ -96,7 +96,7 @@ def(SessionInstance, Resolve, RdString id) {
 }
 
 def(void, Unlink, RdString id) {
-	foreach (sess, this->sessions) {
+	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
 			call(DestroyItem, sess);
 			sess->instance = Session_Null();

@@ -27,6 +27,6 @@ def(void, SetMethod, HTTP_Method method);
 def(void, SetRoute, ResourceRoute *route);
 def(void, SetResource, ResourceInterface *resource);
 def(void, CreateResource);
-def(void, HandleRequest, ResponseInstance resp);
+def(void, HandleRequest, Logger *logger, ResponseInstance resp);
 
 #undef self

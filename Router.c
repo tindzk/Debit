@@ -43,7 +43,7 @@ static def(bool, ParseSub, RdString route, RdString path, ref(OnPart) onPart) {
 	RdString name  = $("");
 	RdString value = $("");
 
-	forward (i, route.len) {
+	fwd(i, route.len) {
 		if (bracket) {
 			if (route.buf[i] == '{') {
 				throw(NestedBrackets);
@@ -59,7 +59,7 @@ static def(bool, ParseSub, RdString route, RdString path, ref(OnPart) onPart) {
 				offset = i + 1;
 			} else {
 				RdString find = String_Slice(route, i);
-				forward (u, find.len) {
+				fwd(u, find.len) {
 					if (find.buf[u] == '{') {
 						find.len = u;
 					}
@@ -98,7 +98,7 @@ def(bool, IsRouteMatching, RdStringArray *route, RdStringArray *path) {
 		return false;
 	}
 
-	forward (i, route->len) {
+	fwd(i, route->len) {
 		if (String_BeginsWith(route->buf[i], $(":"))) {
 			continue;
 		}
@@ -112,7 +112,7 @@ def(bool, IsRouteMatching, RdStringArray *route, RdStringArray *path) {
 }
 
 def(void, ExtractParts, RdStringArray *route, RdStringArray *path, ref(OnPart) onPart) {
-	forward (i, route->len) {
+	fwd(i, route->len) {
 		if (String_BeginsWith(route->buf[i], $(":"))) {
 			if (path->buf[i].len > 0) {
 				RdString name  = String_Slice(route->buf[i], 1);
@@ -130,10 +130,10 @@ def(void, ExtractParts, RdStringArray *route, RdStringArray *path, ref(OnPart) o
 def(MatchingRoute, FindRoute, RdString path) {
 	RdStringArray *arrPath = String_Split(path, '/');
 
-	forward (i, this->resources->len) {
+	fwd(i, this->resources->len) {
 		ResourceInterface *resource = this->resources->buf[i];
 
-		forward (j, ResourceInterface_MaxRoutes) {
+		fwd(j, ResourceInterface_MaxRoutes) {
 			ResourceRoute *route = &resource->routes[j];
 
 			if (route->path.len == 0) {
@@ -163,10 +163,10 @@ def(MatchingRoute, FindRoute, RdString path) {
 }
 
 def(MatchingRoute, GetDefaultRoute) {
-	forward (i, this->resources->len) {
+	fwd(i, this->resources->len) {
 		ResourceInterface *resource = this->resources->buf[i];
 
-		forward (j, ResourceInterface_MaxRoutes) {
+		fwd(j, ResourceInterface_MaxRoutes) {
 			ResourceRoute *route = &resource->routes[j];
 
 			if (route->path.len == 0) {

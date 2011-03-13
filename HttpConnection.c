@@ -2,8 +2,6 @@
 
 #define self HttpConnection
 
-extern Logger logger;
-
 class {
 	bool replied;
 	bool incomplete;
@@ -15,6 +13,7 @@ class {
 	HTTP_Server  server;
 	HTTP_Version version;
 
+	Logger          *logger;
 	Response        resp;
 	FrontController controller;
 };
@@ -27,7 +26,7 @@ static def(String *, OnQueryParameter, RdString name);
 static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
 
-def(void, Init, SocketConnection *conn) {
+def(void, Init, SocketConnection *conn, Logger *logger) {
 	this->method     = HTTP_Method_Get;
 	this->version    = HTTP_Version_1_0;
 	this->incomplete = true;
@@ -44,13 +43,14 @@ def(void, Init, SocketConnection *conn) {
 	HTTP_Server_BindBodyParameter(&this->server, Callback(this, ref(OnBodyParameter)));
 	HTTP_Server_BindRespond(&this->server, Callback(this, ref(OnRespond)));
 
-	Logger_Debug(&logger, $("Connection initialized"));
+	this->resp   = Response_New();
+	this->logger = logger;
 
-	this->resp = Response_New();
+	Logger_Debug(this->logger, $("Connection initialized"));
 }
 
 def(void, Destroy) {
-	Logger_Debug(&logger, $("Connection destroyed"));
+	Logger_Debug(this->logger, $("Connection destroyed"));
 	HTTP_Server_Destroy(&this->server);
 	Response_Destroy(&this->resp);
 
@@ -96,7 +96,7 @@ def(void, Process) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Empty request URI."));
 	} catchAny {
-		Logger_Error(&logger, $("Uncaught exception in HTTP server"));
+		Logger_Error(this->logger, $("Uncaught exception in HTTP server"));
 		__exc_rethrow = true;
 	} finally {
 		String_Destroy(&fmt);
@@ -117,7 +117,7 @@ static def(void, OnPath, RdString path) {
 	Response_Reset(&this->resp);
 	FrontController_Reset(&this->controller);
 
-	Logger_Info(&logger, $("% % %"),
+	Logger_Info(this->logger, $("% % %"),
 		HTTP_Method_ToString(this->method),
 		path,
 		HTTP_Version_ToString(this->version));
@@ -151,7 +151,7 @@ static def(void, OnPath, RdString path) {
 }
 
 static def(void, OnHeader, RdString name, RdString value) {
-	Logger_Debug(&logger, $("Header: % = %"), name, value);
+	Logger_Debug(this->logger, $("Header: % = %"), name, value);
 
 	if (String_Equals(name, $("Cookie"))) {
 		RdStringArray *items = String_Split(value, '=');
@@ -169,13 +169,13 @@ static def(void, OnHeader, RdString name, RdString value) {
 }
 
 static def(String *, OnQueryParameter, RdString name) {
-	Logger_Debug(&logger, $("Received GET parameter '%'"), name);
+	Logger_Debug(this->logger, $("Received GET parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
 }
 
 static def(String *, OnBodyParameter, RdString name) {
-	Logger_Debug(&logger, $("Received POST parameter '%'"), name);
+	Logger_Debug(this->logger, $("Received POST parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
 }
@@ -197,7 +197,7 @@ static def(void, OnBufferSent, __unused RdString *str);
 
 static def(void, OnHeadersSent, RdString *s) {
 	String size = Integer_ToString(s->len);
-	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size.rd);
+	Logger_Debug(this->logger, $("Response headers sent (% bytes)"), size.rd);
 	String_Destroy(&size);
 
 	Response_Body *body = Response_GetBody(&this->resp);
@@ -230,14 +230,14 @@ static def(void, OnHeadersSent, RdString *s) {
 
 static def(void, OnBufferSent, RdString *str) {
 	String size = Integer_ToString(str->len);
-	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size.rd);
+	Logger_Debug(this->logger, $("Buffer sent (% bytes)"), size.rd);
 	String_Destroy(&size);
 
 	call(OnSent, true);
 }
 
 static def(void, OnFileSent, __unused File *file) {
-	Logger_Debug(&logger, $("File sent"));
+	Logger_Debug(this->logger, $("File sent"));
 
 	/* File transfers don't require flushing. */
 	call(OnSent, false);
@@ -254,7 +254,7 @@ static def(void, ProcessResponse, bool persistent) {
 static def(void, OnRespond, bool persistent) {
 	if (FrontController_HasResource(&this->controller)) {
 		FrontController_HandleRequest(&this->controller,
-			&this->resp);
+			this->logger, &this->resp);
 	} else {
 		Response_SetStatus(&this->resp,
 			HTTP_Status_ClientError_NotFound);
@@ -269,7 +269,7 @@ static def(void, OnRespond, bool persistent) {
 static def(void, Error, HTTP_Status status, RdString msg) {
 	this->incomplete = false;
 
-	Logger_Error(&logger, $("Client error: %"), msg);
+	Logger_Error(this->logger, $("Client error: %"), msg);
 
 	Response_SetStatus(&this->resp, status);
 
@@ -317,7 +317,7 @@ static def(bool, Close) {
 }
 
 static def(ClientConnection_Status, Push) {
-	Logger_Debug(&logger, $("Got push"));
+	Logger_Debug(this->logger, $("Got push"));
 
 	call(Process);
 
@@ -327,7 +327,7 @@ static def(ClientConnection_Status, Push) {
 }
 
 static def(ClientConnection_Status, Pull) {
-	Logger_Debug(&logger, $("Got pull"));
+	Logger_Debug(this->logger, $("Got pull"));
 
 	SocketSession_Continue(&this->session);
 

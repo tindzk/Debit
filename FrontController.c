@@ -2,8 +2,6 @@
 
 #define self FrontController
 
-extern Logger logger;
-
 static def(void, Defaults) {
 	this->route    = NULL;
 	this->resource = NULL;
@@ -30,7 +28,7 @@ static def(void, DestroyResource) {
 		this->resource->destroy(this->instance);
 	}
 
-	forward (i, ResourceInterface_MaxMembers) {
+	fwd(i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
 		if (member->name.buf == NULL) {
@@ -90,7 +88,7 @@ def(void, SetHeader, RdString name, RdString value) {
 }
 
 static def(ResourceMember *, ResolveMember, RdString name) {
-	forward (i, ResourceInterface_MaxMembers) {
+	fwd(i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
 		if (member->name.buf == NULL) {
@@ -151,7 +149,7 @@ def(void, CreateResource) {
 		? Generic_New(this->resource->size)
 		: Generic_Null();
 
-	forward (i, ResourceInterface_MaxMembers) {
+	fwd(i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
 		if (member->name.buf == NULL) {
@@ -172,7 +170,7 @@ def(void, CreateResource) {
 	}
 }
 
-def(void, HandleRequest, ResponseInstance resp) {
+def(void, HandleRequest, Logger *logger, ResponseInstance resp) {
 	if (this->route->role == Role_Unspecified) {
 		if (this->resource->role == Role_Unspecified) {
 			/* Default role. Page is accessible for anyone. */
@@ -186,7 +184,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 	SessionManagerInstance sessMgr = SessionManager_GetInstance();
 
 	if (this->request.priv.sessionId.len > 0) {
-		Logger_Debug(&logger, $("Client has session ID is '%'"),
+		Logger_Debug(logger, $("Client has session ID is '%'"),
 			this->request.priv.sessionId.rd);
 	}
 
@@ -211,7 +209,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	/* The user was logged in but his last activity is too long ago. */
 	if (Session_IsExpired(sess)) {
-		Logger_Debug(&logger, $("Session is expired"));
+		Logger_Debug(logger, $("Session is expired"));
 		SessionManager_Unlink(sessMgr, this->request.priv.sessionId.rd);
 
 		/* This resets the whole object, including its ID. But this
@@ -238,7 +236,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 				sess, this->request, resp);
 		} catchAny {
 			String fmt = Exception_Format(e);
-			Logger_Debug(&logger, fmt.rd);
+			Logger_Debug(logger, fmt.rd);
 			BufferResponse(resp, fmt);
 
 #if Exception_SaveTrace
@@ -256,7 +254,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		}
 	} else {
 		/* Authorization required. */
-		Logger_Debug(&logger, $("Authorization required"));
+		Logger_Debug(logger, $("Authorization required"));
 	}
 
 	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
