@@ -118,9 +118,9 @@ rdef(ref(Body) *, GetBody) {
 	return &this->body;
 }
 
-rdef(ProtString, GetHeaders) {
+rdef(RdString, GetHeaders) {
 	CarrierString_Assign(&this->headers,
 		String_ToCarrier(HTTP_Envelope_GetString(&this->envelope)));
 
-	return this->headers.prot;
+	return this->headers.rd;
 }

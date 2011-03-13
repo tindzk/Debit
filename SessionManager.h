@@ -31,8 +31,8 @@ def(void, Destroy);
 def(void, SetBackend, BackendSessionInterface *backend);
 def(SessionInstance, CreateSession);
 def(void, DestroySession, SessionInstance sess);
-def(ProtString, Register, SessionInstance instance);
-def(SessionInstance, Resolve, ProtString id);
-def(void, Unlink, ProtString id);
+def(RdString, Register, SessionInstance instance);
+def(SessionInstance, Resolve, RdString id);
+def(void, Unlink, RdString id);
 
 #undef self

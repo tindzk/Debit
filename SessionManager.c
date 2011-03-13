@@ -63,7 +63,7 @@ def(String, GetUniqueId) {
 	return Integer_ToString((u32) time.sec);
 }
 
-def(ProtString, Register, SessionInstance instance) {
+def(RdString, Register, SessionInstance instance) {
 	Session *sess = Session_GetObject(instance);
 	sess->ref = true;
 
@@ -82,12 +82,12 @@ def(ProtString, Register, SessionInstance instance) {
 	Sessions_Push(&this->sessions, item);
 
 out:
-	return item.id.prot;
+	return item.id.rd;
 }
 
-def(SessionInstance, Resolve, ProtString id) {
+def(SessionInstance, Resolve, RdString id) {
 	foreach (sess, this->sessions) {
-		if (String_Equals(sess->id.prot, id)) {
+		if (String_Equals(sess->id.rd, id)) {
 			return sess->instance;
 		}
 	}
@@ -95,9 +95,9 @@ def(SessionInstance, Resolve, ProtString id) {
 	return Session_Null();
 }
 
-def(void, Unlink, ProtString id) {
+def(void, Unlink, RdString id) {
 	foreach (sess, this->sessions) {
-		if (String_Equals(sess->id.prot, id)) {
+		if (String_Equals(sess->id.rd, id)) {
 			call(DestroyItem, sess);
 			sess->instance = Session_Null();
 

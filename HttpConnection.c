@@ -19,12 +19,12 @@ class {
 	FrontController controller;
 };
 
-static def(void, OnHeader, ProtString name, ProtString value);
+static def(void, OnHeader, RdString name, RdString value);
 static def(void, OnVersion, HTTP_Version version);
 static def(void, OnMethod, HTTP_Method method);
-static def(void, OnPath, ProtString path);
-static def(String *, OnQueryParameter, ProtString name);
-static def(String *, OnBodyParameter, ProtString name);
+static def(void, OnPath, RdString path);
+static def(String *, OnQueryParameter, RdString name);
+static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
 
 def(void, Init, SocketConnection *conn) {
@@ -57,7 +57,7 @@ def(void, Destroy) {
 	FrontController_Destroy(&this->controller);
 }
 
-static def(void, Error, HTTP_Status status, ProtString msg);
+static def(void, Error, HTTP_Status status, RdString msg);
 
 def(void, Process) {
 	this->incomplete = true;
@@ -79,7 +79,7 @@ def(void, Process) {
 		fmt = String_Format(
 			$("Body not expected with method '%'."),
 			HTTP_Method_ToString(this->method));
-		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt.prot);
+		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt.rd);
 	} catch(HTTP_Header, RequestMalformed) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Request malformed."));
@@ -113,7 +113,7 @@ static def(void, OnMethod, HTTP_Method method) {
 }
 
 /* Parameters to extract from URL. */
-static def(void, OnPath, ProtString path) {
+static def(void, OnPath, RdString path) {
 	Response_Reset(&this->resp);
 	FrontController_Reset(&this->controller);
 
@@ -150,11 +150,11 @@ static def(void, OnPath, ProtString path) {
 	}
 }
 
-static def(void, OnHeader, ProtString name, ProtString value) {
+static def(void, OnHeader, RdString name, RdString value) {
 	Logger_Debug(&logger, $("Header: % = %"), name, value);
 
 	if (String_Equals(name, $("Cookie"))) {
-		ProtStringArray *items = String_Split(value, '=');
+		RdStringArray *items = String_Split(value, '=');
 
 		if (items->len > 1) {
 			FrontController_SetCookie(&this->controller,
@@ -162,19 +162,19 @@ static def(void, OnHeader, ProtString name, ProtString value) {
 				items->buf[1]);
 		}
 
-		ProtStringArray_Free(items);
+		RdStringArray_Free(items);
 	} else {
 		FrontController_SetHeader(&this->controller, name, value);
 	}
 }
 
-static def(String *, OnQueryParameter, ProtString name) {
+static def(String *, OnQueryParameter, RdString name) {
 	Logger_Debug(&logger, $("Received GET parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
 }
 
-static def(String *, OnBodyParameter, ProtString name) {
+static def(String *, OnBodyParameter, RdString name) {
 	Logger_Debug(&logger, $("Received POST parameter '%'"), name);
 
 	return FrontController_GetMemberAddr(&this->controller, name);
@@ -193,18 +193,18 @@ static def(void, OnSent, bool flush) {
 }
 
 static def(void, OnFileSent,   __unused File *file);
-static def(void, OnBufferSent, __unused ProtString *str);
+static def(void, OnBufferSent, __unused RdString *str);
 
-static def(void, OnHeadersSent, ProtString *s) {
+static def(void, OnHeadersSent, RdString *s) {
 	String size = Integer_ToString(s->len);
-	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size.prot);
+	Logger_Debug(&logger, $("Response headers sent (% bytes)"), size.rd);
 	String_Destroy(&size);
 
 	Response_Body *body = Response_GetBody(&this->resp);
 
 	switch (body->type) {
 		case (Response_BodyType_Buffer):
-			SocketSession_Write(&this->session, body->buf.prot,
+			SocketSession_Write(&this->session, body->buf.rd,
 				Callback(this, ref(OnBufferSent)));
 
 			break;
@@ -228,9 +228,9 @@ static def(void, OnHeadersSent, ProtString *s) {
 	}
 }
 
-static def(void, OnBufferSent, ProtString *str) {
+static def(void, OnBufferSent, RdString *str) {
 	String size = Integer_ToString(str->len);
-	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size.prot);
+	Logger_Debug(&logger, $("Buffer sent (% bytes)"), size.rd);
 	String_Destroy(&size);
 
 	call(OnSent, true);
@@ -260,13 +260,13 @@ static def(void, OnRespond, bool persistent) {
 			HTTP_Status_ClientError_NotFound);
 
 		Response_SetBufferBody(&this->resp,
-			String_ToCarrier($("Sorry, no matching route found")));
+			String_ToCarrier($$("Sorry, no matching route found")));
 	}
 
 	call(ProcessResponse, persistent);
 }
 
-static def(void, Error, HTTP_Status status, ProtString msg) {
+static def(void, Error, HTTP_Status status, RdString msg) {
 	this->incomplete = false;
 
 	Logger_Error(&logger, $("Client error: %"), msg);
@@ -292,8 +292,8 @@ static def(void, Error, HTTP_Status status, ProtString msg) {
 					"</body>"
 			"</html>"),
 
-		strCode.prot, st.msg,
-		strCode.prot, st.msg,
+		strCode.rd, st.msg,
+		strCode.rd, st.msg,
 		msg)));
 
 	String_Destroy(&strCode);

@@ -73,13 +73,13 @@ def(void, Reset) {
 	call(Defaults);
 }
 
-def(void, SetCookie, ProtString name, ProtString value) {
+def(void, SetCookie, RdString name, RdString value) {
 	if (String_Equals(name, $("Session-ID"))) {
 		String_Copy(&this->request.sessionId, value);
 	}
 }
 
-def(void, SetHeader, ProtString name, ProtString value) {
+def(void, SetHeader, RdString name, RdString value) {
 	String_ToLower((String *) &name);
 
 	if (String_Equals(name, $("if-modified-since"))) {
@@ -89,7 +89,7 @@ def(void, SetHeader, ProtString name, ProtString value) {
 	}
 }
 
-static def(ResourceMember *, ResolveMember, ProtString name) {
+static def(ResourceMember *, ResolveMember, RdString name) {
 	forward (i, ResourceInterface_MaxMembers) {
 		ResourceMember *member = &this->resource->members[i];
 
@@ -105,7 +105,7 @@ static def(ResourceMember *, ResolveMember, ProtString name) {
 	return NULL;
 }
 
-def(String *, GetMemberAddr, ProtString name) {
+def(String *, GetMemberAddr, RdString name) {
 	if (call(HasResource)) {
 		ResourceMember *member = call(ResolveMember, name);
 
@@ -123,7 +123,7 @@ def(String *, GetMemberAddr, ProtString name) {
 	return NULL;
 }
 
-def(bool, Store, ProtString name, ProtString value) {
+def(bool, Store, RdString name, RdString value) {
 	String *s = call(GetMemberAddr, name);
 
 	if (s != NULL) {
@@ -187,7 +187,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	if (this->request.sessionId.len > 0) {
 		Logger_Debug(&logger, $("Client has session ID is '%'"),
-			this->request.sessionId.prot);
+			this->request.sessionId.rd);
 	}
 
 	SessionInstance sess;
@@ -200,7 +200,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 		 * empty session object.
 		 */
 		SessionInstance res = SessionManager_Resolve(sessMgr,
-			this->request.sessionId.prot);
+			this->request.sessionId.rd);
 
 		if (Session_IsNull(res)) {
 			sess = SessionManager_CreateSession(sessMgr);
@@ -212,7 +212,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 	/* The user was logged in but his last activity is too long ago. */
 	if (Session_IsExpired(sess)) {
 		Logger_Debug(&logger, $("Session is expired"));
-		SessionManager_Unlink(sessMgr, this->request.sessionId.prot);
+		SessionManager_Unlink(sessMgr, this->request.sessionId.rd);
 
 		/* This resets the whole object, including its ID. But this
 		 * sets hasChanged to true so that we the ID in the HTTP
@@ -238,7 +238,7 @@ def(void, HandleRequest, ResponseInstance resp) {
 				sess, this->request, resp);
 		} catchAny {
 			String fmt = Exception_Format(e);
-			Logger_Debug(&logger, fmt.prot);
+			Logger_Debug(&logger, fmt.rd);
 			BufferResponse(resp, fmt);
 
 #if Exception_SaveTrace
@@ -261,12 +261,12 @@ def(void, HandleRequest, ResponseInstance resp) {
 
 	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
 		/* Map the session to an ID... */
-		ProtString id = SessionManager_Register(sessMgr, sess);
+		RdString id = SessionManager_Register(sessMgr, sess);
 
 		/* ...and update the cookie accordingly. */
 		Response_SetCookie(resp,
-			String_ToCarrier($("Session-ID")),
-			String_ToCarrier(id));
+			String_ToCarrier($$("Session-ID")),
+			String_ToCarrier(RdString_Exalt(id)));
 	}
 
 	if (Session_IsReferenced(sess)) {

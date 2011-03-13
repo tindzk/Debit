@@ -3,19 +3,19 @@
 #import <Integer.h>
 
 record(FormError) {
-	ProtString field;
-	ProtString msg;
+	RdString field;
+	RdString msg;
 };
 
 Array(FormError, FormErrors);
 
-ProtString Field_GetValue(ProtString val, ProtString field, FormErrors **err);
+RdString Field_GetValue(RdString val, RdString field, FormErrors **err);
 
-s8  Field_GetInt8(ProtString val, ProtString field, FormErrors **err);
-u8 Field_GetUInt8(ProtString val, ProtString field, FormErrors **err);
+s8  Field_GetInt8(RdString val, RdString field, FormErrors **err);
+u8 Field_GetUInt8(RdString val, RdString field, FormErrors **err);
 
-s32  Field_GetInt32(ProtString val, ProtString field, FormErrors **err);
-u32 Field_GetUInt32(ProtString val, ProtString field, FormErrors **err);
+s32  Field_GetInt32(RdString val, RdString field, FormErrors **err);
+u32 Field_GetUInt32(RdString val, RdString field, FormErrors **err);
 
-bool Field_IsSurroundedBySpaces(ProtString s);
-bool Field_IsValidEmail(ProtString s);
+bool Field_IsSurroundedBySpaces(RdString s);
+bool Field_IsValidEmail(RdString s);

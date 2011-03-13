@@ -1,8 +1,8 @@
 #import <String.h>
 
 record(MimeType) {
-	ProtString extension;
-	ProtString mimeType;
+	RdString extension;
+	RdString mimeType;
 };
 
 extern MimeType MimeTypes[];

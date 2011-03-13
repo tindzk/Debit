@@ -46,6 +46,6 @@ def(void, SetBufferBody, CarrierString buf);
 def(void, SetContentType, CarrierString contentType);
 def(void, Process, bool persistent);
 rdef(ref(Body) *, GetBody);
-rdef(ProtString, GetHeaders);
+rdef(RdString, GetHeaders);
 
 #undef self

@@ -2,7 +2,7 @@
 
 extern Logger logger;
 
-void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified) {
+void FileResponse(ResponseInstance resp, RdString path, DateTime lastModified) {
 	try {
 		File file;
 		File_Open(&file, path, FileStatus_ReadOnly);
@@ -11,7 +11,7 @@ void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified)
 
 		if (!BitMask_Has(attr.mode, FileMode_Regular)) {
 			Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
-			BufferResponse(resp, $("Not a file."));
+			BufferResponse(resp, $$("Not a file."));
 			Logger_Error(&logger, $("Not a file."));
 		} else {
 			DateTime fileTime = DateTime_FromUnixEpoch(attr.mtime.sec);
@@ -22,15 +22,17 @@ void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified)
 			} else {
 				Logger_Debug(&logger, $("Sending file..."));
 
-				ProtString ext = Path_GetExtension(path);
+				RdString ext = Path_GetExtension(path);
 
 				Response_SetContentType(resp,
-					String_ToCarrier($("application/octet-stream")));
+					String_ToCarrier($$("application/octet-stream")));
 
 				forward (i, MimeTypes_Length) {
 					if (String_Equals(ext, MimeTypes[i].extension)) {
 						Response_SetContentType(resp,
-							String_ToCarrier(MimeTypes[i].mimeType));
+							String_ToCarrier(
+								RdString_Exalt(
+									MimeTypes[i].mimeType)));
 
 						break;
 					}
@@ -42,11 +44,11 @@ void FileResponse(ResponseInstance resp, ProtString path, DateTime lastModified)
 		}
 	} catch(File, NotFound) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);
-		BufferResponse(resp, $("File not found."));
+		BufferResponse(resp, $$("File not found."));
 		Logger_Error(&logger, $("File not found."));
 	} catch(File, AccessDenied) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_Forbidden);
-		BufferResponse(resp, $("Access denied."));
+		BufferResponse(resp, $$("Access denied."));
 		Logger_Error(&logger, $("Access denied."));
 	} finally {
 
