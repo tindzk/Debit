@@ -3,22 +3,19 @@
 #define self Session
 
 sdef(SessionInstance, New, size_t data) {
-	return (SessionInstance) Generic_New(sizeof(self) + data);
+	SessionInstance inst = (SessionInstance) Generic_New(sizeof(self) + data);
+	scall(Reset, inst);
+	return inst;
 }
 
-def(void, Init) {
-	this->ref = false;
-	this->changed = false;
-	this->lastActivity = (Time_UnixEpoch) { 0, 0 };
-}
-
-def(void, Destroy) {
-
+def(void, Free) {
+	Generic_Free((SessionInstance) this);
 }
 
 def(void, Reset) {
-	call(Destroy);
-	call(Init);
+	this->ref = false;
+	this->changed = false;
+	this->lastActivity = (Time_UnixEpoch) { 0, 0 };
 }
 
 def(GenericInstance, GetData) {

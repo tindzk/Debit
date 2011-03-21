@@ -13,8 +13,7 @@ class {
 };
 
 sdef(SessionInstance, New, size_t data);
-def(void, Init);
-def(void, Destroy);
+def(void, Free);
 def(void, Reset);
 def(GenericInstance, GetData);
 def(bool, IsReferenced);

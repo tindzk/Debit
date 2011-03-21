@@ -32,19 +32,14 @@ def(void, SetBackend, BackendSessionInterface *backend) {
 }
 
 def(SessionInstance, CreateSession) {
-	SessionInstance sess =
-		Session_New(
-			(this->backend != NULL)
-				? this->backend->size
-				: 0);
-
-	Session_Init(sess);
-
 	if (this->backend != NULL) {
+		SessionInstance sess = Session_New(this->backend->size);
 		this->backend->init(Session_GetData(sess));
+
+		return sess;
 	}
 
-	return sess;
+	return Session_New(0);
 }
 
 def(void, DestroySession, SessionInstance sess) {
@@ -52,9 +47,7 @@ def(void, DestroySession, SessionInstance sess) {
 		this->backend->destroy(Session_GetData(sess));
 	}
 
-	Session_Destroy(sess);
-
-	Generic_Free(sess);
+	Session_Free(sess);
 }
 
 /* TODO Use a better algorithm. */
