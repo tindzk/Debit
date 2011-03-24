@@ -1,6 +1,6 @@
 #import "FileResponse.h"
 
-void FileResponse(ResponseInstance resp, RdString path, DateTime lastModified) {
+void FileResponse(Response *resp, RdString path, DateTime lastModified) {
 	try {
 		File file;
 		File_Open(&file, path, FileStatus_ReadOnly);

@@ -2,5 +2,5 @@
 
 #import "Response.h"
 
-overload void RedirectResponse(ResponseInstance resp, String location);
-overload void RedirectResponse(ResponseInstance resp, OmniString location);
+overload void RedirectResponse(Response *resp, String location);
+overload void RedirectResponse(Response *resp, OmniString location);

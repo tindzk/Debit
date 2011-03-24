@@ -10,4 +10,4 @@
 #import "MimeTypes.h"
 #import "BufferResponse.h"
 
-void FileResponse(ResponseInstance resp, RdString path, DateTime lastModified);
+void FileResponse(Response *resp, RdString path, DateTime lastModified);

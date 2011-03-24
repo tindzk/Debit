@@ -23,7 +23,7 @@ override def(void, OnDestroy) { }
 def(void, ListRoutes) {
 	Logger_Debug(&this->logger, $("Registered resources:"));
 
-	RouterInstance router = Router_GetInstance();
+	Router *router = Router_GetInstance();
 
 	Resources *resources = Router_GetResources(router);
 

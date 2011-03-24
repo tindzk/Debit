@@ -2,10 +2,10 @@
 
 #define self Session
 
-sdef(SessionInstance, New, size_t data) {
-	SessionInstance inst = (SessionInstance) Generic_New(sizeof(self) + data);
-	scall(Reset, inst);
-	return inst;
+sdef(self *, New, size_t data) {
+	self *obj = Generic_New(sizeof(self) + data).object;
+	scall(Reset, obj);
+	return obj;
 }
 
 def(void, Free) {
@@ -18,8 +18,8 @@ def(void, Reset) {
 	this->lastActivity = (Time_UnixEpoch) { 0, 0 };
 }
 
-def(GenericInstance, GetData) {
-	return Generic_FromObject((void *) this->data);
+def(void *, GetData) {
+	return (void *) this->data;
 }
 
 def(bool, IsExpired) {

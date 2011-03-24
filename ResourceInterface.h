@@ -40,17 +40,16 @@ static alwaysInline Date_RFC822 Request_GetLastModified(Request req) {
 
 typedef void (ResourceInit)   (GenericInstance);
 typedef void (ResourceDestroy)(GenericInstance);
-typedef void (ResourceAction) (
-	GenericInstance  $this,
-	SessionInstance  $sess,
-	Request          $req,
-	ResponseInstance $resp);
+typedef void (ResourceAction) (GenericInstance $this,
+	Session  *      $sess,
+	Request         $req,
+	Response *      $resp);
 
-#define action(name)                   \
-	static def(void, name,             \
-		__unused SessionInstance sess, \
-		__unused Request req,          \
-		__unused ResponseInstance resp)
+#define action(name)            \
+	static def(void, name,      \
+		__unused Session *sess, \
+		__unused Request req,   \
+		__unused Response *resp)
 
 #define dispatch(name) \
 	call(name, sess, req, resp)
@@ -60,7 +59,7 @@ typedef void (ResourceAction) (
 
 #define RouterConstructor                               \
 	Constructor {                                       \
-		RouterInstance router = Router_GetInstance();   \
+		Router *router = Router_GetInstance();          \
 		Router_AddResource(router, &ref(ResourceImpl)); \
 	}
 

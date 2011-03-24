@@ -107,7 +107,7 @@ def(bool, IsRouteMatching, RdStringArray *route, RdStringArray *path) {
 			continue;
 		}
 
-		if (!call(ParseSub, route->buf[i], path->buf[i], EmptyCallback())) {
+		if (!call(ParseSub, route->buf[i], path->buf[i], scall(OnPart_Empty))) {
 			return false;
 		}
 	}

@@ -1,6 +1,6 @@
 #import "TemplateResponse.h"
 
-void TemplateResponse(ResponseInstance resp, Template tpl) {
+void TemplateResponse(Response *resp, Template tpl) {
 	String out = String_New(0);
 
 	callback(tpl, &out);

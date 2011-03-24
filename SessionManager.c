@@ -31,9 +31,9 @@ def(void, SetBackend, BackendSessionInterface *backend) {
 	this->backend = backend;
 }
 
-def(SessionInstance, CreateSession) {
+def(Session *, CreateSession) {
 	if (this->backend != NULL) {
-		SessionInstance sess = Session_New(this->backend->size);
+		Session *sess = Session_New(this->backend->size);
 		this->backend->init(Session_GetData(sess));
 
 		return sess;
@@ -42,7 +42,7 @@ def(SessionInstance, CreateSession) {
 	return Session_New(0);
 }
 
-def(void, DestroySession, SessionInstance sess) {
+def(void, DestroySession, Session *sess) {
 	if (this->backend != NULL) {
 		this->backend->destroy(Session_GetData(sess));
 	}
@@ -56,7 +56,7 @@ def(String, GetUniqueId) {
 	return Integer_ToString((u32) time.sec);
 }
 
-def(RdString, Register, SessionInstance instance) {
+def(RdString, Register, Session *instance) {
 	Session *sess = Session_GetObject(instance);
 	sess->ref = true;
 
@@ -78,21 +78,21 @@ out:
 	return item.id.rd;
 }
 
-def(SessionInstance, Resolve, RdString id) {
+def(Session *, Resolve, RdString id) {
 	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
 			return sess->instance;
 		}
 	}
 
-	return Session_Null();
+	return NULL;
 }
 
 def(void, Unlink, RdString id) {
 	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
 			call(DestroyItem, sess);
-			sess->instance = Session_Null();
+			sess->instance = NULL;
 
 			break;
 		}

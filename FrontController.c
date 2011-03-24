@@ -168,7 +168,7 @@ def(void, CreateResource) {
 	}
 }
 
-def(void, HandleRequest, Logger *logger, ResponseInstance resp) {
+def(void, HandleRequest, Logger *logger, Response *resp) {
 	if (this->route->role == Role_Unspecified) {
 		if (this->resource->role == Role_Unspecified) {
 			/* Default role. Page is accessible for anyone. */
@@ -179,14 +179,14 @@ def(void, HandleRequest, Logger *logger, ResponseInstance resp) {
 		}
 	}
 
-	SessionManagerInstance sessMgr = SessionManager_GetInstance();
+	SessionManager *sessMgr = SessionManager_GetInstance();
 
 	if (this->request.priv.sessionId.len > 0) {
 		Logger_Debug(logger, $("Client has session ID is '%'"),
 			this->request.priv.sessionId.rd);
 	}
 
-	SessionInstance sess;
+	Session *sess;
 
 	if (this->request.priv.sessionId.len == 0) {
 		/* Initialize the session but don't map it to an ID, yet. */
@@ -195,7 +195,7 @@ def(void, HandleRequest, Logger *logger, ResponseInstance resp) {
 		/* If the ID is found, just use its session object. Otherwise create an
 		 * empty session object.
 		 */
-		SessionInstance res = SessionManager_Resolve(sessMgr,
+		Session *res = SessionManager_Resolve(sessMgr,
 			this->request.priv.sessionId.rd);
 
 		if (Session_IsNull(res)) {

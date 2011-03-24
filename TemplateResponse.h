@@ -3,4 +3,4 @@
 
 #import "Response.h"
 
-void TemplateResponse(ResponseInstance resp, Template tpl);
+void TemplateResponse(Response *resp, Template tpl);

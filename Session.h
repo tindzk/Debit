@@ -12,10 +12,10 @@ class {
 	char data[];
 };
 
-sdef(SessionInstance, New, size_t data);
+sdef(self *, New, size_t data);
 def(void, Free);
 def(void, Reset);
-def(GenericInstance, GetData);
+def(void *, GetData);
 def(bool, IsReferenced);
 def(bool, HasChanged);
 def(void, SetChanged);

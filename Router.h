@@ -22,7 +22,7 @@ record(MatchingRoute) {
 	ResourceInterface *resource;
 };
 
-DefineCallback(ref(OnPart), void, RdString name, RdString value);
+Callback(ref(OnPart), void, RdString name, RdString value);
 
 SingletonPrototype(self);
 

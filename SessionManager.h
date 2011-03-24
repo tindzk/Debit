@@ -14,7 +14,7 @@ Interface(BackendSession) {
 
 record(SessionItem) {
 	String id;
-	SessionInstance instance;
+	Session *instance;
 };
 
 Array(SessionItem, Sessions);
@@ -29,10 +29,10 @@ SingletonPrototype(self);
 rsdef(self, New);
 def(void, Destroy);
 def(void, SetBackend, BackendSessionInterface *backend);
-def(SessionInstance, CreateSession);
-def(void, DestroySession, SessionInstance sess);
-def(RdString, Register, SessionInstance instance);
-def(SessionInstance, Resolve, RdString id);
+def(Session *, CreateSession);
+def(void, DestroySession, Session *sess);
+def(RdString, Register, Session *instance);
+def(Session *, Resolve, RdString id);
 def(void, Unlink, RdString id);
 
 #undef self

@@ -35,13 +35,13 @@ def(void, Init, SocketConnection *conn, Logger *logger) {
 	this->session    = SocketSession_New(conn);
 	this->server     = HTTP_Server_New(conn, 2048, 4096);
 
-	HTTP_Server_BindHeader(&this->server, Callback(this, ref(OnHeader)));
-	HTTP_Server_BindVersion(&this->server, Callback(this, ref(OnVersion)));
-	HTTP_Server_BindMethod(&this->server, Callback(this, ref(OnMethod)));
-	HTTP_Server_BindPath(&this->server, Callback(this, ref(OnPath)));
-	HTTP_Server_BindQueryParameter(&this->server, Callback(this, ref(OnQueryParameter)));
-	HTTP_Server_BindBodyParameter(&this->server, Callback(this, ref(OnBodyParameter)));
-	HTTP_Server_BindRespond(&this->server, Callback(this, ref(OnRespond)));
+	HTTP_Server_BindHeader(&this->server, HTTP_OnHeader_For(this, ref(OnHeader)));
+	HTTP_Server_BindVersion(&this->server, HTTP_OnVersion_For(this, ref(OnVersion)));
+	HTTP_Server_BindMethod(&this->server, HTTP_OnMethod_For(this, ref(OnMethod)));
+	HTTP_Server_BindPath(&this->server, HTTP_OnPath_For(this, ref(OnPath)));
+	HTTP_Server_BindQueryParameter(&this->server, HTTP_OnParameter_For(this, ref(OnQueryParameter)));
+	HTTP_Server_BindBodyParameter(&this->server, HTTP_OnParameter_For(this, ref(OnBodyParameter)));
+	HTTP_Server_BindRespond(&this->server, HTTP_Server_OnRespond_For(this, ref(OnRespond)));
 
 	this->resp   = Response_New();
 	this->logger = logger;
@@ -112,6 +112,10 @@ static def(void, OnMethod, HTTP_Method method) {
 	this->method = method;
 }
 
+static def(void, OnPart, RdString name, RdString value) {
+	FrontController_Store(&this->controller, name, value);
+}
+
 /* Parameters to extract from URL. */
 static def(void, OnPath, RdString path) {
 	Response_Reset(&this->resp);
@@ -122,7 +126,7 @@ static def(void, OnPath, RdString path) {
 		path,
 		HTTP_Version_ToString(this->version));
 
-	RouterInstance router = Router_GetInstance();
+	Router *router = Router_GetInstance();
 
 	MatchingRoute match = Router_FindRoute(router, path);
 
@@ -141,9 +145,7 @@ static def(void, OnPath, RdString path) {
 			Router_ExtractParts(router,
 				match.routeElems,
 				match.pathElems,
-				Callback(
-					&this->controller,
-					FrontController_Store));
+				Router_OnPart_For(this, ref(OnPart)));
 		}
 
 		Router_DestroyMatch(router, match);
@@ -192,10 +194,12 @@ static def(void, OnSent, bool flush) {
 	this->persistent = Response_IsPersistent(&this->resp);
 }
 
-static def(void, OnFileSent,   __unused File *file);
-static def(void, OnBufferSent, __unused RdString *str);
+static def(void, OnFileSent,   __unused void *ptr);
+static def(void, OnBufferSent, __unused void *ptr);
 
-static def(void, OnHeadersSent, RdString *s) {
+static def(void, OnHeadersSent, void *ptr) {
+	String *s = ptr;
+
 	String size = Integer_ToString(s->len);
 	Logger_Debug(this->logger, $("Response headers sent (% bytes)"), size.rd);
 	String_Destroy(&size);
@@ -205,7 +209,7 @@ static def(void, OnHeadersSent, RdString *s) {
 	switch (body->type) {
 		case (Response_BodyType_Buffer):
 			SocketSession_Write(&this->session, body->buf.rd,
-				Callback(this, ref(OnBufferSent)));
+				SocketSession_OnDone_For(this, ref(OnBufferSent)));
 
 			break;
 
@@ -213,7 +217,7 @@ static def(void, OnHeadersSent, RdString *s) {
 			SocketSession_SendFile(&this->session,
 				body->file.file,
 				body->file.size,
-				Callback(this, ref(OnFileSent)));
+				SocketSession_OnDone_For(this, ref(OnFileSent)));
 
 			break;
 
@@ -228,7 +232,9 @@ static def(void, OnHeadersSent, RdString *s) {
 	}
 }
 
-static def(void, OnBufferSent, RdString *str) {
+static def(void, OnBufferSent, void *ptr) {
+	RdString *str = ptr;
+
 	String size = Integer_ToString(str->len);
 	Logger_Debug(this->logger, $("Buffer sent (% bytes)"), size.rd);
 	String_Destroy(&size);
@@ -236,7 +242,7 @@ static def(void, OnBufferSent, RdString *str) {
 	call(OnSent, true);
 }
 
-static def(void, OnFileSent, __unused File *file) {
+static def(void, OnFileSent, __unused void *ptr) {
 	Logger_Debug(this->logger, $("File sent"));
 
 	/* File transfers don't require flushing. */
@@ -248,7 +254,7 @@ static def(void, ProcessResponse, bool persistent) {
 
 	SocketSession_Write(&this->session,
 		Response_GetHeaders(&this->resp),
-		Callback(this, ref(OnHeadersSent)));
+		SocketSession_OnDone_For(this, ref(OnHeadersSent)));
 }
 
 static def(void, OnRespond, bool persistent) {
