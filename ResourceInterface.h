@@ -54,9 +54,6 @@ typedef void (ResourceAction) (GenericInstance $this,
 #define dispatch(name) \
 	call(name, sess, req, resp)
 
-#define Action(name) \
-	(void *) ref(name)
-
 #define RouterConstructor                               \
 	Constructor {                                       \
 		Router *router = Router_GetInstance();          \
