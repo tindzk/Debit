@@ -8,8 +8,8 @@
 Interface(BackendSession) {
 	size_t size;
 
-	Method(void, init);
-	Method(void, destroy);
+	void (*init)   (GenericInstance);
+	void (*destroy)(GenericInstance);
 };
 
 record(SessionItem) {
