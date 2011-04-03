@@ -2,9 +2,9 @@
 
 #define self Application
 
-def(bool, StartServer, Server *server, ClientListener listener) {
+static def(bool, StartServer, Server *server, ConnectionInterface *conn) {
 	try {
-		Server_Init(server, 8080, listener);
+		Server_Init(server, 8080, conn, &this->logger);
 		Logger_Info(&this->logger, $("Server started."));
 		excReturn true;
 	} catch(Socket, AddressInUse) {
@@ -50,14 +50,9 @@ def(void, ListRoutes) {
 def(bool, Run) {
 	call(ListRoutes);
 
-	GenericClientListener listener;
-	GenericClientListener_Init(&listener, HttpConnection_GetImpl(), &this->logger);
-
 	Server server;
 
-	if (!call(StartServer, &server,
-		GenericClientListener_AsClientListener(&listener)))
-	{
+	if (!call(StartServer, &server, HttpConnection_GetImpl())) {
 		return false;
 	}
 

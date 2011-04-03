@@ -6,7 +6,6 @@
 #import <Integer.h>
 #import <Exception.h>
 #import <Application.h>
-#import <GenericClientListener.h>
 
 #import "HttpConnection.h"
 #import "SessionManager.h"

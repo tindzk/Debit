@@ -9,7 +9,6 @@
 #import <HTTP/Envelope.h>
 #import <SocketSession.h>
 #import <SocketConnection.h>
-#import <ClientConnection.h>
 
 #import "Router.h"
 #import "BufferResponse.h"
