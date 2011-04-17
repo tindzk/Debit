@@ -2,21 +2,6 @@
 
 #define self Application
 
-static def(bool, StartServer, Server *server, ConnectionInterface *conn) {
-	try {
-		Server_Init(server, 8080, conn, &this->logger);
-		Logger_Info(&this->logger, $("Server started."));
-		excReturn true;
-	} catch(Socket, AddressInUse) {
-		Logger_Error(&this->logger, $("The address is already in use!"));
-		excReturn false;
-	} finally {
-
-	} tryEnd;
-
-	return false;
-}
-
 override def(void, OnInit)    { }
 override def(void, OnDestroy) { }
 
@@ -48,20 +33,24 @@ def(void, ListRoutes) {
 }
 
 def(bool, Run) {
+	Server server = Server_New(HttpConnection_GetImpl(), &this->logger);
+
+	try {
+		Server_Listen(&server, 8080);
+		Logger_Info(&this->logger, $("Server started."));
+	} catch(Socket, AddressInUse) {
+		Logger_Error(&this->logger, $("The address is already in use!"));
+		excReturn false;
+	} finally {
+
+	} tryEnd;
+
 	call(ListRoutes);
-
-	Server server;
-
-	if (!call(StartServer, &server, HttpConnection_GetImpl())) {
-		return false;
-	}
 
 	call(OnInit);
 
 	try {
-		while (true) {
-			Server_Process(&server);
-		}
+		EventLoop_Run(EventLoop_GetInstance());
 	} catch(Signal, SigInt) {
 		Logger_Info(&this->logger, $("Server shutdown."));
 	} finally {
