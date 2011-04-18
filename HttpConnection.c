@@ -16,10 +16,8 @@ class {
 };
 
 static def(void, OnRequest);
+static def(void, OnRequestInfo, HTTP_RequestInfo info);
 static def(void, OnHeader, RdString name, RdString value);
-static def(void, OnVersion, HTTP_Version version);
-static def(void, OnMethod, HTTP_Method method);
-static def(void, OnPath, RdString path);
 static def(String *, OnQueryParameter, RdString name);
 static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
@@ -31,14 +29,23 @@ def(void, Init, Connection_Client *client, Logger *logger) {
 	this->client     = client;
 	this->incomplete = true;
 
-	HTTP_Server_BindRequest(&this->server, HTTP_Server_OnRequest_For(this, ref(OnRequest)));
-	HTTP_Server_BindHeader(&this->server, HTTP_OnHeader_For(this, ref(OnHeader)));
-	HTTP_Server_BindVersion(&this->server, HTTP_OnVersion_For(this, ref(OnVersion)));
-	HTTP_Server_BindMethod(&this->server, HTTP_OnMethod_For(this, ref(OnMethod)));
-	HTTP_Server_BindPath(&this->server, HTTP_OnPath_For(this, ref(OnPath)));
-	HTTP_Server_BindQueryParameter(&this->server, HTTP_OnParameter_For(this, ref(OnQueryParameter)));
-	HTTP_Server_BindBodyParameter(&this->server, HTTP_OnParameter_For(this, ref(OnBodyParameter)));
-	HTTP_Server_BindRespond(&this->server, HTTP_Server_OnRespond_For(this, ref(OnRespond)));
+	HTTP_Server_BindRequest(&this->server,
+		HTTP_Server_OnRequest_For(this, ref(OnRequest)));
+
+	HTTP_Server_BindRequestInfo(&this->server,
+		HTTP_OnRequestInfo_For(this, ref(OnRequestInfo)));
+
+	HTTP_Server_BindHeader(&this->server,
+		HTTP_OnHeader_For(this, ref(OnHeader)));
+
+	HTTP_Server_BindQueryParameter(&this->server,
+		HTTP_OnParameter_For(this, ref(OnQueryParameter)));
+
+	HTTP_Server_BindBodyParameter(&this->server,
+		HTTP_OnParameter_For(this, ref(OnBodyParameter)));
+
+	HTTP_Server_BindRespond(&this->server,
+		HTTP_Server_OnRespond_For(this, ref(OnRespond)));
 
 	this->logger = logger;
 
@@ -113,35 +120,26 @@ static def(void, OnRequest) {
 	ResponseSender_NewPacket(&this->respSender);
 }
 
-static def(void, OnVersion, HTTP_Version version) {
+static def(void, OnRequestInfo, HTTP_RequestInfo info) {
 	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
-	RequestPacket_SetVersion(packet, version);
 
-	this->version = version;
-}
+	RequestPacket_SetMethod(packet,  info.method);
+	RequestPacket_SetVersion(packet, info.version);
 
-static def(void, OnMethod, HTTP_Method method) {
-	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
-	RequestPacket_SetMethod(packet, method);
+	this->method  = info.method;
+	this->version = info.version;
 
-	this->method = method;
-}
-
-/* Parameters to extract from URL. */
-static def(void, OnPath, RdString path) {
 	Logger_Info(this->logger, $("% % %"),
-		HTTP_Method_ToString(this->method), path,
+		HTTP_Method_ToString(this->method), info.path,
 		HTTP_Version_ToString(this->version));
 
 	Router *router = Router_GetInstance();
 
-	MatchingRoute match = Router_FindRoute(router, path);
+	MatchingRoute match = Router_FindRoute(router, info.path);
 
 	if (match.route == NULL) {
 		match = Router_GetDefaultRoute(router);
 	}
-
-	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
 
 	if (match.route != NULL) {
 		FrontController_CreateResource(&packet->controller,
