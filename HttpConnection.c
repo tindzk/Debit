@@ -164,15 +164,10 @@ static def(void, OnHeader, RdString name, RdString value) {
 	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
 
 	if (String_Equals(name, $("Cookie"))) {
-		RdStringArray *items = String_Split(value, '=');
-
-		if (items->len > 1) {
-			RequestPacket_SetCookie(packet,
-				items->buf[0],
-				items->buf[1]);
+		RdString cookieName, cookieValue;
+		if (String_Parse($("%=%"), value, &cookieName, &cookieValue)) {
+			RequestPacket_SetCookie(packet, cookieName, cookieValue);
 		}
-
-		RdStringArray_Free(items);
 	} else {
 		RequestPacket_SetHeader(packet, name, value);
 	}
