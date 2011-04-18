@@ -39,6 +39,7 @@ def(void, SetMethod, HTTP_Method method);
 def(void, SetCookie, RdString name, RdString value);
 def(void, SetHeader, RdString name, RdString value);
 def(void, Dispatch, bool persistent);
+def(void, Error, HTTP_Status status, RdString msg);
 def(void, Flush);
 def(bool, IsReady);
 

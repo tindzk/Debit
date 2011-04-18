@@ -56,8 +56,7 @@ def(void, Destroy) {
 
 static def(void, Error, HTTP_Status status, RdString msg) {
 	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
-
-	FrontController_Error(&packet->controller, status, msg, &packet->response);
+	RequestPacket_Error(packet, status, msg);
 }
 
 def(void, Process) {

@@ -103,30 +103,38 @@ def(void, Dispatch, bool persistent) {
 		this->sess, &this->request, &this->response);
 }
 
+def(void, Error, HTTP_Status status, RdString msg) {
+	FrontController_Error(&this->controller,
+		status, msg, &this->response);
+}
+
 def(void, Flush) {
 	assert(this->state != ref(State_Done));
 
-	FrontController_PostDispatch(&this->controller,
-		this->sess, &this->request, &this->response);
+	/* sess is not initialized when an error occurred. */
+	if (this->sess != NULL) {
+		FrontController_PostDispatch(&this->controller,
+			this->sess, &this->request, &this->response);
 
-	SessionManager *sessMgr = SessionManager_GetInstance();
+		SessionManager *sessMgr = SessionManager_GetInstance();
 
-	if (Session_HasChanged(this->sess) && !Session_IsReferenced(this->sess)) {
-		/* Map the session to an ID... */
-		RdString id = SessionManager_Register(sessMgr, this->sess);
+		if (Session_HasChanged(this->sess) && !Session_IsReferenced(this->sess)) {
+			/* Map the session to an ID... */
+			RdString id = SessionManager_Register(sessMgr, this->sess);
 
-		/* ...and update the cookie accordingly. */
-		Response_SetCookie(&this->response,
-			String_ToCarrier($$("Session-ID")),
-			String_ToCarrier(RdString_Exalt(id)));
-	}
+			/* ...and update the cookie accordingly. */
+			Response_SetCookie(&this->response,
+				String_ToCarrier($$("Session-ID")),
+				String_ToCarrier(RdString_Exalt(id)));
+		}
 
-	if (Session_IsReferenced(this->sess)) {
-		/* Update the last activity. */
-		Session_Touch(this->sess);
-	} else {
-		/* Session was not used. It can be safely destroyed. */
-		SessionManager_DestroySession(sessMgr, this->sess);
+		if (Session_IsReferenced(this->sess)) {
+			/* Update the last activity. */
+			Session_Touch(this->sess);
+		} else {
+			/* Session was not used. It can be safely destroyed. */
+			SessionManager_DestroySession(sessMgr, this->sess);
+		}
 	}
 
 	this->state = ref(State_Done);
