@@ -3,21 +3,19 @@
 #define self HttpConnection
 
 class {
-	bool replied;
 	bool incomplete;
-	bool persistent;
-
-	SocketSession session;
 
 	HTTP_Method  method;
 	HTTP_Server  server;
 	HTTP_Version version;
 
-	Logger          *logger;
-	Response        resp;
-	FrontController controller;
+	ResponseSender respSender;
+
+	Logger            *logger;
+	Connection_Client *client;
 };
 
+static def(void, OnRequest);
 static def(void, OnHeader, RdString name, RdString value);
 static def(void, OnVersion, HTTP_Version version);
 static def(void, OnMethod, HTTP_Method method);
@@ -26,15 +24,14 @@ static def(String *, OnQueryParameter, RdString name);
 static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
 
-def(void, Init, SocketConnection *conn, Logger *logger) {
+def(void, Init, Connection_Client *client, Logger *logger) {
 	this->method     = HTTP_Method_Get;
 	this->version    = HTTP_Version_1_0;
+	this->server     = HTTP_Server_New(client->conn, 2048, 4096);
+	this->client     = client;
 	this->incomplete = true;
-	this->replied    = false;
-	this->controller = FrontController_New();
-	this->session    = SocketSession_New(conn);
-	this->server     = HTTP_Server_New(conn, 2048, 4096);
 
+	HTTP_Server_BindRequest(&this->server, HTTP_Server_OnRequest_For(this, ref(OnRequest)));
 	HTTP_Server_BindHeader(&this->server, HTTP_OnHeader_For(this, ref(OnHeader)));
 	HTTP_Server_BindVersion(&this->server, HTTP_OnVersion_For(this, ref(OnVersion)));
 	HTTP_Server_BindMethod(&this->server, HTTP_OnMethod_For(this, ref(OnMethod)));
@@ -43,21 +40,25 @@ def(void, Init, SocketConnection *conn, Logger *logger) {
 	HTTP_Server_BindBodyParameter(&this->server, HTTP_OnParameter_For(this, ref(OnBodyParameter)));
 	HTTP_Server_BindRespond(&this->server, HTTP_Server_OnRespond_For(this, ref(OnRespond)));
 
-	this->resp   = Response_New();
 	this->logger = logger;
 
 	Logger_Debug(this->logger, $("Connection initialized"));
+
+	ResponseSender_Init(&this->respSender, client, logger);
 }
 
 def(void, Destroy) {
 	Logger_Debug(this->logger, $("Connection destroyed"));
-	HTTP_Server_Destroy(&this->server);
-	Response_Destroy(&this->resp);
 
-	FrontController_Destroy(&this->controller);
+	ResponseSender_Destroy(&this->respSender);
+	HTTP_Server_Destroy(&this->server);
 }
 
-static def(void, Error, HTTP_Status status, RdString msg);
+static def(void, Error, HTTP_Status status, RdString msg) {
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+
+	FrontController_Error(&packet->controller, status, msg, &packet->response);
+}
 
 def(void, Process) {
 	this->incomplete = true;
@@ -99,31 +100,37 @@ def(void, Process) {
 		Logger_Error(this->logger, $("Uncaught exception in HTTP server"));
 		__exc_rethrow = true;
 	} finally {
+		if (e != 0) {
+			this->incomplete = false;
+		}
+
 		String_Destroy(&fmt);
 	} tryEnd;
 }
 
+static def(void, OnRequest) {
+	Logger_Debug(this->logger, $("Receiving request..."));
+	ResponseSender_NewPacket(&this->respSender);
+}
+
 static def(void, OnVersion, HTTP_Version version) {
-	Response_SetVersion(&this->resp, version);
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+	RequestPacket_SetVersion(packet, version);
+
 	this->version = version;
 }
 
 static def(void, OnMethod, HTTP_Method method) {
-	this->method = method;
-}
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+	RequestPacket_SetMethod(packet, method);
 
-static def(void, OnPart, RdString name, RdString value) {
-	FrontController_Store(&this->controller, name, value);
+	this->method = method;
 }
 
 /* Parameters to extract from URL. */
 static def(void, OnPath, RdString path) {
-	Response_Reset(&this->resp);
-	FrontController_Reset(&this->controller);
-
 	Logger_Info(this->logger, $("% % %"),
-		HTTP_Method_ToString(this->method),
-		path,
+		HTTP_Method_ToString(this->method), path,
 		HTTP_Version_ToString(this->version));
 
 	Router *router = Router_GetInstance();
@@ -134,18 +141,17 @@ static def(void, OnPath, RdString path) {
 		match = Router_GetDefaultRoute(router);
 	}
 
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+
 	if (match.route != NULL) {
-		FrontController_SetMethod(&this->controller, this->method);
-		FrontController_SetRoute(&this->controller, match.route);
-		FrontController_SetResource(&this->controller, match.resource);
-		FrontController_CreateResource(&this->controller);
+		FrontController_CreateResource(&packet->controller,
+			match.route, match.resource);
 
 		/* `routeElems' and `pathElems' aren't used for the default route. */
 		if (match.routeElems != NULL) {
 			Router_ExtractParts(router,
-				match.routeElems,
-				match.pathElems,
-				Router_OnPart_For(this, ref(OnPart)));
+				match.routeElems, match.pathElems,
+				Router_OnPart_For(&packet->controller, FrontController_StoreEx));
 		}
 
 		Router_DestroyMatch(router, match);
@@ -155,189 +161,60 @@ static def(void, OnPath, RdString path) {
 static def(void, OnHeader, RdString name, RdString value) {
 	Logger_Debug(this->logger, $("Header: % = %"), name, value);
 
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+
 	if (String_Equals(name, $("Cookie"))) {
 		RdStringArray *items = String_Split(value, '=');
 
 		if (items->len > 1) {
-			FrontController_SetCookie(&this->controller,
+			RequestPacket_SetCookie(packet,
 				items->buf[0],
 				items->buf[1]);
 		}
 
 		RdStringArray_Free(items);
 	} else {
-		FrontController_SetHeader(&this->controller, name, value);
+		RequestPacket_SetHeader(packet, name, value);
 	}
 }
 
 static def(String *, OnQueryParameter, RdString name) {
 	Logger_Debug(this->logger, $("Received GET parameter '%'"), name);
 
-	return FrontController_GetMemberAddr(&this->controller, name);
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+
+	return FrontController_GetMemberAddr(&packet->controller, name);
 }
 
 static def(String *, OnBodyParameter, RdString name) {
 	Logger_Debug(this->logger, $("Received POST parameter '%'"), name);
 
-	return FrontController_GetMemberAddr(&this->controller, name);
-}
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
 
-static def(void, OnSent, bool flush) {
-	/* When the connection is closed, the buffer is flushed
-	 * anyway. Therefore, we can save a syscall.
-	 */
-	if (flush && Response_IsPersistent(&this->resp)) {
-		SocketSession_Flush(&this->session);
-	}
-
-	this->replied    = true;
-	this->persistent = Response_IsPersistent(&this->resp);
-}
-
-static def(void, OnFileSent,   __unused void *ptr);
-static def(void, OnBufferSent, __unused void *ptr);
-
-static def(void, OnHeadersSent, void *ptr) {
-	String *s = ptr;
-
-	String size = Integer_ToString(s->len);
-	Logger_Debug(this->logger, $("Response headers sent (% bytes)"), size.rd);
-	String_Destroy(&size);
-
-	Response_Body *body = Response_GetBody(&this->resp);
-
-	switch (body->type) {
-		case (Response_BodyType_Buffer):
-			SocketSession_Write(&this->session, body->buf.rd,
-				SocketSession_OnDone_For(this, ref(OnBufferSent)));
-
-			break;
-
-		case Response_BodyType_File:
-			SocketSession_SendFile(&this->session,
-				body->file.file,
-				body->file.size,
-				SocketSession_OnDone_For(this, ref(OnFileSent)));
-
-			break;
-
-		/* TODO */
-		case Response_BodyType_Stream:
-			call(OnSent, true);
-			break;
-
-		case Response_BodyType_Empty:
-			call(OnSent, true);
-			break;
-	}
-}
-
-static def(void, OnBufferSent, void *ptr) {
-	RdString *str = ptr;
-
-	String size = Integer_ToString(str->len);
-	Logger_Debug(this->logger, $("Buffer sent (% bytes)"), size.rd);
-	String_Destroy(&size);
-
-	call(OnSent, true);
-}
-
-static def(void, OnFileSent, __unused void *ptr) {
-	Logger_Debug(this->logger, $("File sent"));
-
-	/* File transfers don't require flushing. */
-	call(OnSent, false);
-}
-
-static def(void, ProcessResponse, bool persistent) {
-	Response_Process(&this->resp, persistent);
-
-	SocketSession_Write(&this->session,
-		Response_GetHeaders(&this->resp),
-		SocketSession_OnDone_For(this, ref(OnHeadersSent)));
+	return FrontController_GetMemberAddr(&packet->controller, name);
 }
 
 static def(void, OnRespond, bool persistent) {
-	if (FrontController_HasResource(&this->controller)) {
-		FrontController_HandleRequest(&this->controller,
-			this->logger, &this->resp);
-	} else {
-		Response_SetStatus(&this->resp,
-			HTTP_Status_ClientError_NotFound);
-
-		Response_SetBufferBody(&this->resp,
-			String_ToCarrier($$("Sorry, no matching route found")));
-	}
-
-	call(ProcessResponse, persistent);
-}
-
-static def(void, Error, HTTP_Status status, RdString msg) {
-	this->incomplete = false;
-
-	Logger_Error(this->logger, $("Client error: %"), msg);
-
-	Response_SetStatus(&this->resp, status);
-
-	HTTP_Status_Item st = HTTP_Status_GetItem(status);
-
-	String strCode = Integer_ToString(st.code);
-
-	Response_SetBufferBody(&this->resp, String_ToCarrier(String_Format(
-		$(
-			"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-			"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" "
-								"\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
-			"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">"
-					"<head>"
-							"<title>% - %</title>"
-					"</head>"
-					"<body>"
-							"<h1>% - %</h1>"
-							"<h2>%</h2>"
-					"</body>"
-			"</html>"),
-
-		strCode.rd, st.msg,
-		strCode.rd, st.msg,
-		msg)));
-
-	String_Destroy(&strCode);
-
-	call(ProcessResponse, false);
-}
-
-static def(bool, Close) {
-	if (this->incomplete) {
-		return false;
-	}
-
-	if (this->replied) {
-		this->replied    = false;
-		this->incomplete = true;
-
-		return !this->persistent;
-	}
-
-	return false;
-}
-
-static def(Connection_Status, Push) {
-	Logger_Debug(this->logger, $("Got push"));
-
-	call(Process);
-
-	return SocketSession_IsIdle(&this->session) && call(Close)
-		? Connection_Status_Close
-		: Connection_Status_Open;
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+	RequestPacket_Dispatch(packet, persistent);
 }
 
 static def(Connection_Status, Pull) {
 	Logger_Debug(this->logger, $("Got pull"));
 
-	SocketSession_Continue(&this->session);
+	call(Process);
 
-	return SocketSession_IsIdle(&this->session) && call(Close)
+	return !this->incomplete && ResponseSender_Close(&this->respSender)
+		? Connection_Status_Close
+		: Connection_Status_Open;
+}
+
+static def(Connection_Status, Push) {
+	Logger_Debug(this->logger, $("Got push"));
+
+	ResponseSender_Continue(&this->respSender);
+
+	return !this->incomplete && ResponseSender_Close(&this->respSender)
 		? Connection_Status_Close
 		: Connection_Status_Open;
 }
@@ -346,6 +223,6 @@ Impl(Connection) = {
 	.size    = sizeof(self),
 	.init    = ref(Init),
 	.destroy = ref(Destroy),
-	.push    = ref(Push),
-	.pull    = ref(Pull)
+	.pull    = ref(Pull),
+	.push    = ref(Push)
 };

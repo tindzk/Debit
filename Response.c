@@ -1,13 +1,15 @@
 #import "Response.h"
+#import "RequestPacket.h"
 
 #define self Response
 
-rsdef(self, New) {
+rsdef(self, New, struct RequestPacket *packet) {
 	return (self) {
 		.envelope  = HTTP_Envelope_New(),
 		.body.type = ref(BodyType_Empty),
 		.version   = HTTP_Version_1_0,
-		.headers   = CarrierString_New()
+		.headers   = CarrierString_New(),
+		.packet    = packet
 	};
 }
 
@@ -18,6 +20,7 @@ static def(void, DestroyBody) {
 		File_Close(&this->body.file.file);
 	} else if (this->body.type == ref(BodyType_Stream)) {
 		/* TODO */
+		assert(false);
 	}
 
 	this->body.type = ref(BodyType_Empty);
@@ -89,7 +92,17 @@ def(void, SetContentType, CarrierString contentType) {
 	HTTP_Envelope_SetContentType(&this->envelope, contentType);
 }
 
-def(void, Process, bool persistent) {
+def(void, SetPersistent, bool persistent) {
+	this->persistent = persistent;
+}
+
+rdef(ref(Body) *, GetBody) {
+	return &this->body;
+}
+
+rdef(RdString, GetHeaders) {
+	bool persistent = this->persistent;
+
 	/* Are we dealing with a stream of which we don't know its length? */
 	if (this->body.type == ref(BodyType_Stream)) {
 		switch (this->version) {
@@ -104,6 +117,7 @@ def(void, Process, bool persistent) {
 
 			case HTTP_Version_1_1:
 				/* TODO Use chunked transfer. */
+				assert(false);
 				break;
 
 			case HTTP_Version_Unset:
@@ -112,15 +126,14 @@ def(void, Process, bool persistent) {
 	}
 
 	HTTP_Envelope_SetPersistent(&this->envelope, persistent);
-}
 
-rdef(ref(Body) *, GetBody) {
-	return &this->body;
-}
-
-rdef(RdString, GetHeaders) {
 	CarrierString_Assign(&this->headers,
 		String_ToCarrier(HTTP_Envelope_GetString(&this->envelope)));
 
 	return this->headers.rd;
+}
+
+def(void, Flush) {
+	assert(this->packet != NULL);
+	RequestPacket_Flush(this->packet);
 }

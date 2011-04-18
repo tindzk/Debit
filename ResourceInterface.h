@@ -1,8 +1,8 @@
 #import <HTTP.h>
 #import <String.h>
-#import <HTTP/Method.h>
 
 #import "Session.h"
+#import "Request.h"
 #import "Response.h"
 
 #ifndef ResourceInterface_MaxMembers
@@ -13,42 +13,17 @@
 #define ResourceInterface_MaxRoutes  15
 #endif
 
-record(Request) {
-	struct {
-		String referer;
-		String sessionId;
-		HTTP_Method method;
-		Date_RFC822 lastModified;
-	} priv;
-};
-
-static alwaysInline RdString Request_GetReferer(Request req) {
-	return req.priv.referer.rd;
-}
-
-static alwaysInline RdString Request_GetSessionId(Request req) {
-	return req.priv.sessionId.rd;
-}
-
-static alwaysInline HTTP_Method Request_GetMethod(Request req) {
-	return req.priv.method;
-}
-
-static alwaysInline Date_RFC822 Request_GetLastModified(Request req) {
-	return req.priv.lastModified;
-}
-
 typedef void (ResourceInit)   (GenericInstance);
 typedef void (ResourceDestroy)(GenericInstance);
 typedef void (ResourceAction) (GenericInstance $this,
-	Session  *      $sess,
-	Request         $req,
-	Response *      $resp);
+	Session  *sess,
+	Request  *req,
+	Response *resp);
 
-#define action(name)            \
-	static def(void, name,      \
-		__unused Session *sess, \
-		__unused Request req,   \
+#define action(name)             \
+	static def(void, name,       \
+		__unused Session *sess,  \
+		__unused Request  *req,  \
 		__unused Response *resp)
 
 #define dispatch(name) \

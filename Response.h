@@ -25,10 +25,12 @@ record(ref(Body)) {
 };
 
 class {
+	bool persistent;
 	HTTP_Version version;
 	ref(Body) body;
 	CarrierString headers;
 	HTTP_Envelope envelope;
+	struct RequestPacket *packet;
 };
 
 rsdef(self, New);
@@ -44,8 +46,9 @@ def(void, SetLastModified, DateTime lastModified);
 def(void, SetFileBody, File file, u64 size);
 def(void, SetBufferBody, CarrierString buf);
 def(void, SetContentType, CarrierString contentType);
-def(void, Process, bool persistent);
+def(void, SetPersistent, bool persistent);
 rdef(ref(Body) *, GetBody);
 rdef(RdString, GetHeaders);
+def(void, Flush);
 
 #undef self

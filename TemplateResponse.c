@@ -7,4 +7,6 @@ void TemplateResponse(Response *resp, Template tpl) {
 
 	Response_SetBufferBody (resp, String_ToCarrier(out));
 	Response_SetContentType(resp, String_ToCarrier($$("text/html; charset=utf-8")));
+
+	Response_Flush(resp);
 }

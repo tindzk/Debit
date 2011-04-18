@@ -7,10 +7,11 @@
 #import <HTTP/Server.h>
 #import <HTTP/Status.h>
 #import <HTTP/Envelope.h>
-#import <SocketSession.h>
 #import <SocketConnection.h>
 
 #import "Router.h"
+#import "Request.h"
+#import "ResponseSender.h"
 #import "BufferResponse.h"
 #import "FrontController.h"
 #import "ResourceInterface.h"

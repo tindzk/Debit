@@ -1,26 +1,15 @@
 #import "FrontController.h"
+#import "RequestPacket.h"
 
 #define self FrontController
 
-static def(void, Defaults) {
-	this->route    = NULL;
-	this->resource = NULL;
-	this->instance = Generic_Null();
-
-	this->request.priv.lastModified  = Date_RFC822_Empty();
-	this->request.priv.referer.len   = 0;
-	this->request.priv.sessionId.len = 0;
-}
-
-rsdef(self, New) {
-	self res;
-
-	res.request.priv.referer   = String_New(0);
-	res.request.priv.sessionId = String_New(0);
-
-	scall(Defaults, &res);
-
-	return res;
+rsdef(self, New, Logger *logger) {
+	return (self) {
+		.route    = NULL,
+		.resource = NULL,
+		.instance = Generic_Null(),
+		.logger   = logger
+	};
 }
 
 static def(void, DestroyResource) {
@@ -54,37 +43,10 @@ def(void, Destroy) {
 	if (this->resource != NULL) {
 		call(DestroyResource);
 	}
-
-	String_Destroy(&this->request.priv.referer);
-	String_Destroy(&this->request.priv.sessionId);
 }
 
 def(bool, HasResource) {
 	return this->resource != NULL;
-}
-
-def(void, Reset) {
-	if (this->resource != NULL) {
-		call(DestroyResource);
-	}
-
-	call(Defaults);
-}
-
-def(void, SetCookie, RdString name, RdString value) {
-	if (String_Equals(name, $("Session-ID"))) {
-		String_Copy(&this->request.priv.sessionId, value);
-	}
-}
-
-def(void, SetHeader, RdString name, RdString value) {
-	String_ToLower((String *) &name);
-
-	if (String_Equals(name, $("if-modified-since"))) {
-		this->request.priv.lastModified = Date_RFC822_Parse(value);
-	} else if (String_Equals(name, $("referer"))) {
-		String_Copy(&this->request.priv.referer, value);
-	}
 }
 
 static def(ResourceMember *, ResolveMember, RdString name) {
@@ -132,19 +94,22 @@ def(bool, Store, RdString name, RdString value) {
 	return false;
 }
 
-def(void, SetMethod, HTTP_Method method) {
-	this->request.priv.method = method;
+def(void, StoreEx, RdString name, RdString value) {
+	String *s = call(GetMemberAddr, name);
+
+	if (s != NULL) {
+		String_Copy(s, value);
+	}
 }
 
-def(void, SetRoute, ResourceRoute *route) {
-	this->route = route;
-}
+def(void, CreateResource, ResourceRoute *route, ResourceInterface *resource) {
+	/* This function should only be called once in order not to leak memory. */
+	assert(this->route    == NULL);
+	assert(this->resource == NULL);
+	assert(Generic_IsNull(this->instance));
 
-def(void, SetResource, ResourceInterface *resource) {
+	this->route    = route;
 	this->resource = resource;
-}
-
-def(void, CreateResource) {
 	this->instance = Generic_New(this->resource->size);
 
 	fwd(i, ResourceInterface_MaxMembers) {
@@ -168,7 +133,25 @@ def(void, CreateResource) {
 	}
 }
 
-def(void, HandleRequest, Logger *logger, Response *resp) {
+def(void, Dispatch, Session *sess, Request *request, Response *response) {
+	assert(sess     != NULL);
+	assert(request  != NULL);
+	assert(response != NULL);
+
+	if (!call(HasResource)) {
+		Response_SetStatus(response, HTTP_Status_ClientError_NotFound);
+
+		Response_SetBufferBody(response,
+			String_ToCarrier($$("Sorry, no matching route found")));
+
+		Response_Flush(response);
+
+		return;
+	}
+
+	assert(this->route != NULL);
+	assert(!Generic_IsNull(this->instance));
+
 	if (this->route->role == Role_Unspecified) {
 		if (this->resource->role == Role_Unspecified) {
 			/* Default role. Page is accessible for anyone. */
@@ -179,63 +162,29 @@ def(void, HandleRequest, Logger *logger, Response *resp) {
 		}
 	}
 
-	SessionManager *sessMgr = SessionManager_GetInstance();
-
-	if (this->request.priv.sessionId.len > 0) {
-		Logger_Debug(logger, $("Client has session ID is '%'"),
-			this->request.priv.sessionId.rd);
-	}
-
-	Session *sess;
-
-	if (this->request.priv.sessionId.len == 0) {
-		/* Initialize the session but don't map it to an ID, yet. */
-		sess = SessionManager_CreateSession(sessMgr);
+	if (this->route->role == Role_User /* && !Session_IsUser(sess) */) {
+		/* Authorization required. */
+		Logger_Debug(this->logger, $("Authorization required"));
 	} else {
-		/* If the ID is found, just use its session object. Otherwise create an
-		 * empty session object.
-		 */
-		Session *res = SessionManager_Resolve(sessMgr,
-			this->request.priv.sessionId.rd);
-
-		if (Session_IsNull(res)) {
-			sess = SessionManager_CreateSession(sessMgr);
-		} else {
-			sess = res;
-		}
-	}
-
-	/* The user was logged in but his last activity is too long ago. */
-	if (Session_IsExpired(sess)) {
-		Logger_Debug(logger, $("Session is expired"));
-		SessionManager_Unlink(sessMgr, this->request.priv.sessionId.rd);
-
-		/* This resets the whole object, including its ID. But this
-		 * sets hasChanged to true so that we the ID in the HTTP
-		 * cookie will be updated too.
-		 */
-		Session_Reset(sess);
-	}
-
-	if (this->route->role == Role_Guest /* || Session_IsUser(sess) */) {
 		/* Rule doesn't require user role or client is already
 		 * authorized.
 		 */
 
-		#undef action
-
 		if (this->route->setUp != NULL) {
-			this->route->setUp(this->instance,
-				sess, this->request, resp);
+			this->route->setUp(this->instance, sess, request, response);
 		}
 
+		#undef action
+
 		try {
-			this->route->action(this->instance,
-				sess, this->request, resp);
+			this->route->action(this->instance, sess, request, response);
 		} catchAny {
 			String fmt = Exception_Format(e);
-			Logger_Debug(logger, fmt.rd);
-			BufferResponse(resp, fmt);
+			Logger_Debug(this->logger, fmt.rd);
+
+			Response_SetStatus(response, HTTP_Status_ServerError_Internal);
+			Response_SetBufferBody(response, String_ToCarrier(fmt));
+			Response_Flush(response);
 
 #if Exception_SaveTrace
 			Backtrace_PrintTrace(
@@ -245,31 +194,52 @@ def(void, HandleRequest, Logger *logger, Response *resp) {
 		} finally {
 
 		} tryEnd;
+	}
+}
+
+def(void, PostDispatch, Session *sess, Request *request, Response *response) {
+	assert(sess     != NULL);
+	assert(request  != NULL);
+	assert(response != NULL);
+
+	if (call(HasResource)) {
+		assert(this->route != NULL);
+		assert(!Generic_IsNull(this->instance));
 
 		if (this->route->tearDown != NULL) {
-			this->route->tearDown(this->instance,
-				sess, this->request, resp);
+			this->route->tearDown(this->instance, sess, request, response);
 		}
-	} else {
-		/* Authorization required. */
-		Logger_Debug(logger, $("Authorization required"));
 	}
+}
 
-	if (Session_HasChanged(sess) && !Session_IsReferenced(sess)) {
-		/* Map the session to an ID... */
-		RdString id = SessionManager_Register(sessMgr, sess);
+def(void, Error, HTTP_Status status, RdString msg, Response *response) {
+	Logger_Error(this->logger, $("Client error: %"), msg);
 
-		/* ...and update the cookie accordingly. */
-		Response_SetCookie(resp,
-			String_ToCarrier($$("Session-ID")),
-			String_ToCarrier(RdString_Exalt(id)));
-	}
+	HTTP_Status_Item st = HTTP_Status_GetItem(status);
 
-	if (Session_IsReferenced(sess)) {
-		/* Update the last activity. */
-		Session_Touch(sess);
-	} else {
-		/* Session was not used. It can be safely destroyed. */
-		SessionManager_DestroySession(sessMgr, sess);
-	}
+	String strCode = Integer_ToString(st.code);
+
+	Response_SetStatus    (response, status);
+	Response_SetBufferBody(response, String_ToCarrier(String_Format(
+		$(
+			"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+			"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" "
+								"\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
+			"<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">"
+					"<head>"
+							"<title>% - %</title>"
+					"</head>"
+					"<body>"
+							"<h1>% - %</h1>"
+							"<h2>%</h2>"
+					"</body>"
+			"</html>"),
+
+		strCode.rd, st.msg,
+		strCode.rd, st.msg,
+		msg)));
+
+	String_Destroy(&strCode);
+
+	Response_Flush(response);
 }

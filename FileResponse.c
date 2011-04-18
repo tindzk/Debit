@@ -39,6 +39,8 @@ void FileResponse(Response *resp, RdString path, DateTime lastModified) {
 				Response_SetFileBody    (resp, file, attr.size);
 				Response_SetLastModified(resp, fileTime);
 			}
+
+			Response_Flush(resp);
 		}
 	} catch(File, NotFound) {
 		Response_SetStatus(resp, HTTP_Status_ClientError_NotFound);

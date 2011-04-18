@@ -1,32 +1,29 @@
 #import <String.h>
 #import <Logger.h>
 
+#import "Session.h"
+#import "Request.h"
 #import "Response.h"
-#import "BufferResponse.h"
-#import "SessionManager.h"
 #import "ResourceInterface.h"
 
 #define self FrontController
 
 class {
-	Request           request;
 	GenericInstance   instance;
+	Logger            *logger;
 	ResourceRoute     *route;
 	ResourceInterface *resource;
 };
 
-rsdef(self, New);
+rsdef(self, New, Logger *logger);
 def(void, Destroy);
 def(bool, HasResource);
-def(void, Reset);
-def(void, SetCookie, RdString name, RdString value);
-def(void, SetHeader, RdString name, RdString value);
 def(String *, GetMemberAddr, RdString name);
 def(bool, Store, RdString name, RdString value);
-def(void, SetMethod, HTTP_Method method);
-def(void, SetRoute, ResourceRoute *route);
-def(void, SetResource, ResourceInterface *resource);
-def(void, CreateResource);
-def(void, HandleRequest, Logger *logger, Response *resp);
+def(void, StoreEx, RdString name, RdString value);
+def(void, CreateResource, ResourceRoute *route, ResourceInterface *resource);
+def(void, Dispatch, Session *sess, Request *request, Response *response);
+def(void, PostDispatch, Session *sess, Request *request, Response *response);
+def(void, Error, HTTP_Status status, RdString msg, Response *response);
 
 #undef self
