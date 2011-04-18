@@ -3,16 +3,11 @@
 #define self HttpConnection
 
 class {
-	bool incomplete;
-
-	HTTP_Method  method;
-	HTTP_Server  server;
-	HTTP_Version version;
-
-	ResponseSender respSender;
-
-	Logger            *logger;
+	ResponseSender    respSender;
+	HTTP_Server       server;
+	bool              incomplete;
 	Connection_Client *client;
+	Logger            *logger;
 };
 
 static def(void, OnRequest);
@@ -23,11 +18,9 @@ static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
 
 def(void, Init, Connection_Client *client, Logger *logger) {
-	this->method     = HTTP_Method_Get;
-	this->version    = HTTP_Version_1_0;
-	this->server     = HTTP_Server_New(client->conn, 2048, 4096);
-	this->client     = client;
 	this->incomplete = true;
+	this->client     = client;
+	this->server     = HTTP_Server_New(client->conn, 2048, 4096);
 
 	HTTP_Server_BindRequest(&this->server,
 		HTTP_Server_OnRequest_For(this, ref(OnRequest)));
@@ -70,8 +63,6 @@ static def(void, Error, HTTP_Status status, RdString msg) {
 def(void, Process) {
 	this->incomplete = true;
 
-	String fmt = String_New(0);
-
 	try {
 		this->incomplete = HTTP_Server_Process(&this->server);
 	} catch(HTTP_Query, ExceedsPermittedLength) {
@@ -84,10 +75,8 @@ def(void, Process) {
 		call(Error, HTTP_Status_ServerError_NotImplemented,
 			$("Method is not implemented."));
 	} catch(HTTP_Server, BodyUnexpected) {
-		fmt = String_Format(
-			$("Body not expected with method '%'."),
-			HTTP_Method_ToString(this->method));
-		call(Error, HTTP_Status_ClientError_ExpectationFailed, fmt.rd);
+		call(Error, HTTP_Status_ClientError_ExpectationFailed,
+			$("Body not expected for given method."));
 	} catch(HTTP_Header, RequestMalformed) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Request malformed."));
@@ -110,8 +99,6 @@ def(void, Process) {
 		if (e != 0) {
 			this->incomplete = false;
 		}
-
-		String_Destroy(&fmt);
 	} tryEnd;
 }
 
@@ -126,12 +113,9 @@ static def(void, OnRequestInfo, HTTP_RequestInfo info) {
 	RequestPacket_SetMethod(packet,  info.method);
 	RequestPacket_SetVersion(packet, info.version);
 
-	this->method  = info.method;
-	this->version = info.version;
-
 	Logger_Info(this->logger, $("% % %"),
-		HTTP_Method_ToString(this->method), info.path,
-		HTTP_Version_ToString(this->version));
+		HTTP_Method_ToString(info.method), info.path,
+		HTTP_Version_ToString(info.version));
 
 	Router *router = Router_GetInstance();
 
