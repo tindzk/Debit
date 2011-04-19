@@ -13,7 +13,7 @@ def(void, Init, ResponseSender *sender, Logger *logger) {
 
 	this->request.priv.referer       = String_New(0);
 	this->request.priv.sessionId     = String_New(0);
-	this->request.priv.lastModified  = Date_RFC822_Empty();
+	this->request.priv.lastModified  = Date_RFC822_New();
 	this->request.priv.referer.len   = 0;
 	this->request.priv.sessionId.len = 0;
 
