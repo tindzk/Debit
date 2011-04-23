@@ -3,11 +3,10 @@
 #define self HttpConnection
 
 class {
-	ResponseSender    respSender;
-	HTTP_Server       server;
-	bool              incomplete;
-	Connection_Client *client;
-	Logger            *logger;
+	ResponseSender respSender;
+	HTTP_Server    server;
+	Logger         *logger;
+	Server_Client  *client;
 };
 
 static def(void, OnRequest);
@@ -17,10 +16,9 @@ static def(String *, OnQueryParameter, RdString name);
 static def(String *, OnBodyParameter, RdString name);
 static def(void, OnRespond, bool persistent);
 
-def(void, Init, Connection_Client *client, Logger *logger) {
-	this->incomplete = true;
-	this->client     = client;
-	this->server     = HTTP_Server_New(client->conn, 2048, 4096);
+def(void, Init, Server_Client *client, Logger *logger) {
+	this->client = client;
+	this->server = HTTP_Server_New(client->socket.conn, 2048, 4096);
 
 	HTTP_Server_BindRequest(&this->server,
 		HTTP_Server_OnRequest_For(this, ref(OnRequest)));
@@ -52,53 +50,6 @@ def(void, Destroy) {
 
 	ResponseSender_Destroy(&this->respSender);
 	HTTP_Server_Destroy(&this->server);
-}
-
-static def(void, Error, HTTP_Status status, RdString msg) {
-	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
-	RequestPacket_Error(packet, status, msg);
-}
-
-def(void, Process) {
-	this->incomplete = true;
-
-	try {
-		this->incomplete = HTTP_Server_Process(&this->server);
-	} catch(HTTP_Query, ExceedsPermittedLength) {
-		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
-			$("A parameter exceeds its permitted length."));
-	} catch(HTTP_Header, UnknownVersion) {
-		call(Error, HTTP_Status_ServerError_VersionNotSupported,
-			$("Unknown HTTP version."));
-	} catch(HTTP_Header, UnknownMethod) {
-		call(Error, HTTP_Status_ServerError_NotImplemented,
-			$("Method is not implemented."));
-	} catch(HTTP_Server, BodyUnexpected) {
-		call(Error, HTTP_Status_ClientError_ExpectationFailed,
-			$("Body not expected for given method."));
-	} catch(HTTP_Header, RequestMalformed) {
-		call(Error, HTTP_Status_ClientError_BadRequest,
-			$("Request malformed."));
-	} catch(HTTP_Server, HeaderTooLarge) {
-		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
-			$("The header exceeds its permitted length."));
-	} catch(HTTP_Server, BodyTooLarge) {
-		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
-			$("The body exceeds its permitted length."));
-	} catch(HTTP_Server, UnknownContentType) {
-		call(Error, HTTP_Status_ClientError_NotAcceptable,
-			$("Content-Type not recognized."));
-	} catch(HTTP_Header, EmptyRequestUri) {
-		call(Error, HTTP_Status_ClientError_BadRequest,
-			$("Empty request URI."));
-	} catchAny {
-		Logger_Error(this->logger, $("Uncaught exception in HTTP server"));
-		__exc_rethrow = true;
-	} finally {
-		if (e != 0) {
-			this->incomplete = false;
-		}
-	} tryEnd;
 }
 
 static def(void, OnRequest) {
@@ -175,24 +126,59 @@ static def(void, OnRespond, bool persistent) {
 	RequestPacket_Dispatch(packet, persistent);
 }
 
-static def(Connection_Status, Pull) {
-	Logger_Debug(this->logger, $("Got pull"));
-
-	call(Process);
-
-	return !this->incomplete && ResponseSender_Close(&this->respSender)
-		? Connection_Status_Close
-		: Connection_Status_Open;
+static inline def(void, Error, HTTP_Status status, RdString msg) {
+	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+	RequestPacket_Error(packet, status, msg);
 }
 
-static def(Connection_Status, Push) {
+static def(void, Pull) {
+	Logger_Debug(this->logger, $("Got pull"));
+
+	ResponseSender_SetComplete(&this->respSender, false);
+
+	try {
+		bool incomplete = HTTP_Server_Process(&this->server);
+		ResponseSender_SetComplete(&this->respSender, !incomplete);
+	} catch(HTTP_Query, ExceedsPermittedLength) {
+		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
+			$("A parameter exceeds its permitted length."));
+	} catch(HTTP_Header, UnknownVersion) {
+		call(Error, HTTP_Status_ServerError_VersionNotSupported,
+			$("Unknown HTTP version."));
+	} catch(HTTP_Header, UnknownMethod) {
+		call(Error, HTTP_Status_ServerError_NotImplemented,
+			$("Method is not implemented."));
+	} catch(HTTP_Server, BodyUnexpected) {
+		call(Error, HTTP_Status_ClientError_ExpectationFailed,
+			$("Body not expected for given method."));
+	} catch(HTTP_Header, RequestMalformed) {
+		call(Error, HTTP_Status_ClientError_BadRequest,
+			$("Request malformed."));
+	} catch(HTTP_Server, HeaderTooLarge) {
+		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
+			$("The header exceeds its permitted length."));
+	} catch(HTTP_Server, BodyTooLarge) {
+		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
+			$("The body exceeds its permitted length."));
+	} catch(HTTP_Server, UnknownContentType) {
+		call(Error, HTTP_Status_ClientError_NotAcceptable,
+			$("Content-Type not recognized."));
+	} catch(HTTP_Header, EmptyRequestUri) {
+		call(Error, HTTP_Status_ClientError_BadRequest,
+			$("Empty request URI."));
+	} catchAny {
+		Logger_Error(this->logger, $("Uncaught exception in HTTP server"));
+		__exc_rethrow = true;
+	} finally {
+		if (e != 0 || ResponseSender_Close(&this->respSender)) {
+			Server_Client_Close(this->client);
+		}
+	} tryEnd;
+}
+
+static def(void, Push) {
 	Logger_Debug(this->logger, $("Got push"));
-
 	ResponseSender_Continue(&this->respSender);
-
-	return !this->incomplete && ResponseSender_Close(&this->respSender)
-		? Connection_Status_Close
-		: Connection_Status_Open;
 }
 
 Impl(Connection) = {

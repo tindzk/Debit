@@ -2,9 +2,12 @@
 
 #define self ResponseSender
 
-def(void, Init, Connection_Client *client, Logger *logger) {
-	this->logger  = logger;
-	this->session = SocketSession_New(client->conn);
+def(void, Init, Server_Client *client, Logger *logger) {
+	this->complete   = false;
+	this->persistent = false;
+	this->logger     = logger;
+	this->client     = client;
+	this->session    = SocketSession_New(client->socket.conn);
 
 	DoublyLinkedList_Init(&this->packets);
 }
@@ -60,6 +63,19 @@ static sdef(void, OnSent, RequestPacket *packet, bool flush) {
 		 * if it already has a response.
 		 */
 		scall(SendResponse, _this, next);
+	} else if (_this->packets.first == NULL) {
+		/* We have replied to all requests, i.e. this is the last request. */
+		if (!_this->persistent) {
+			/* Therefore we can take its `persistent' status and close the
+			 * connection if necessary.
+			 */
+			if (_this->complete) {
+				/* `complete' means that the buffer in HTTP.Server is processed.
+				 * This is only the case for asynchronous resources.
+				 */
+				Server_Client_Close(_this->client);
+			}
+		}
 	}
 }
 
@@ -178,7 +194,7 @@ def(bool, Close) {
 	/* Have we replied to all requests? */
 	if (this->packets.first == NULL) {
 		/* Use the `persistent' status from the last request. */
-		return !this->persistent;
+		return this->complete && !this->persistent;
 	}
 
 	return false;
