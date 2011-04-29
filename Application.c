@@ -38,7 +38,7 @@ def(bool, Run) {
 	try {
 		Server_Listen(&server, 8080);
 		Logger_Info(&this->logger, $("Server started."));
-	} catch(Socket, AddressInUse) {
+	} catch(SocketServer, AddressInUse) {
 		Logger_Error(&this->logger, $("The address is already in use!"));
 		excReturn false;
 	} finally {
