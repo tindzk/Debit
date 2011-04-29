@@ -2,18 +2,34 @@
 
 #define self ResponseSender
 
-def(void, Init, Server_Client *client, Logger *logger) {
-	this->complete   = false;
-	this->persistent = false;
-	this->logger     = logger;
-	this->client     = client;
-	this->session    = SocketSession_New(client->socket.conn);
-
-	DoublyLinkedList_Init(&this->packets);
+rsdef(self, New, Server_Client *client, Logger *logger) {
+	return (self) {
+		.logger     = logger,
+		.client     = client,
+		.session    = SocketSession_New(client->socket.conn),
+		.packets    = DoublyLinkedList_New()
+	};
 }
 
 def(void, DestroyPacket, RequestPacketExtendedInstance packet) {
+	Logger_Info(this->logger, $("Destroying remaining/unsent packet."));
+
 	RequestPacket_Destroy(packet);
+	Pool_Free(Pool_GetInstance(), packet.object);
+}
+
+def(void, DropPacketsUntil, RequestPacket *except) {
+	for (;;) {
+		RequestPacket *cur = this->packets.first;
+
+		if (cur == NULL || cur == except) {
+			break;
+		}
+
+		DoublyLinkedList_Remove(&this->packets, cur);
+
+		call(DestroyPacket, cur);
+	}
 }
 
 def(void, Destroy) {
@@ -41,42 +57,34 @@ static sdef(void, OnSent, RequestPacket *packet, bool flush) {
 
 	self* _this = packet->sender;
 
-	/* When the connection is closed, the buffer is flushed anyway. Therefore,
-	 * we can save a system call.
-	 */
-	if (flush && Response_IsPersistent(&packet->response)) {
-		SocketSession_Flush(&_this->session);
-	}
+	bool persistent = Response_IsPersistent(&packet->response);
 
-	/* Remember the `persistent' state as the object won't be accessible any
-	 * longer.
-	 */
-	_this->persistent = Response_IsPersistent(&packet->response);
+	if (persistent) {
+		if (flush) {
+			/* When the connection is closed, the buffer is flushed anyway.
+			 * Therefore, we can save a system call.
+			 */
+
+			SocketSession_Flush(&_this->session);
+		}
+
+		if (next != NULL && RequestPacket_IsReady(next)) {
+			/* There are more packets in the queue. Continue with the next one. */
+			scall(Flush, _this);
+		}
+	} else {
+		if (next != NULL) {
+			Logger_Debug(_this->logger,
+				$("There are still requests but client requests closure."));
+		}
+
+		Server_Client_Close(_this->client);
+	}
 
 	DoublyLinkedList_Remove(&_this->packets, packet);
 
 	RequestPacket_Destroy(packet);
 	Pool_Free(Pool_GetInstance(), packet);
-
-	if (next != NULL && RequestPacket_IsReady(next)) {
-		/* There might be more packets in the queue. Continue with the next one
-		 * if it already has a response.
-		 */
-		scall(SendResponse, _this, next);
-	} else if (_this->packets.first == NULL) {
-		/* We have replied to all requests, i.e. this is the last request. */
-		if (!_this->persistent) {
-			/* Therefore we can take its `persistent' status and close the
-			 * connection if necessary.
-			 */
-			if (_this->complete) {
-				/* `complete' means that the buffer in HTTP.Server is processed.
-				 * This is only the case for asynchronous resources.
-				 */
-				Server_Client_Close(_this->client);
-			}
-		}
-	}
 }
 
 static sdef(void, OnHeadersSent, GenericInstance inst, void *ptr) {
@@ -145,40 +153,54 @@ static sdef(void, OnFileSent, GenericInstance inst, __unused void *ptr) {
 
 /* This method is called by the user (TemplateResponse() etc.) to initiate the
  * transmission.
+ */
+
+def(void, Flush) {
+	Logger_Debug(this->logger, $("Received flush request."));
+
+	if (!RequestPacket_IsReady(this->packets.first)) {
+		Logger_Debug(this->logger, $("But first packet is not ready."));
+		return;
+	}
+
+	/* We don't send the data right away using SocketSession_Write() but rather
+	 * inject a push request to keep the code simpler as the resource's action
+	 * (where this function call can be traced back to) should complete first.
+	 * Otherwise we could run into a problem when the resource is destroyed in
+	 * OnSent() and the action tries to access a resource's member variable.
+	 *
+	 * Even if the client is not in a state of receiving data, enqueuing a
+	 * `fake' push request won't pose any problems as the socket is non-blocking
+	 * and just returns EAGAIN if the client isn't ready. When the client can
+	 * finally receive the sequel of the data, we receive a `real' push request
+	 * and just send the rest of the response accordingly.
+	 */
+
+	Server_Client_Push(this->client);
+}
+
+/* This method is called when we receive a `push' request from the client.
  *
  * Packets cannot be sent in an arbitrary order. We have to start with the first
  * packet and process the rest step by step. If the first packet is not ready
  * yet, we have to wait.
  */
-
-def(void, SendResponse, RequestPacket *packet) {
-	/* This should not be called when we're not done with sending the existing
-	 * session.
-	 */
-	assert(SocketSession_IsIdle(&this->session));
-
-	if (this->packets.first != packet) {
-		call(SendResponse, this->packets.first);
-		return;
-	}
-
-	if (!RequestPacket_IsReady(packet)) {
-		Logger_Debug(this->logger, $("Packet is not ready."));
-		return;
-	}
-
-	SocketSession_Write(&this->session,
-		Response_GetHeaders(&packet->response),
-		SocketSession_OnDone_For(packet, ref(OnHeadersSent)));
-}
-
-/* This method is called when we receive a `push' request from the client. */
 def(void, Continue) {
 	/* Before we can move over to the next response, any remaining data
 	 * belonging to the current response must be sent to the client first.
 	 */
 	if (!SocketSession_IsIdle(&this->session)) {
+		Logger_Debug(this->logger, $("Complete existing session first."));
 		SocketSession_Continue(&this->session);
+
+		if (!SocketSession_IsIdle(&this->session)) {
+			Logger_Debug(this->logger,
+				$("Existing session still contains data."));
+			return;
+		} else {
+			Logger_Debug(this->logger,
+				$("Existing successfully sent. Continuing with next packet..."));
+		}
 	}
 
 	if (this->packets.first == NULL) {
@@ -186,16 +208,12 @@ def(void, Continue) {
 		return;
 	}
 
-	call(SendResponse, this->packets.first);
-}
-
-/* Returns true if we can close the connection. */
-def(bool, Close) {
-	/* Have we replied to all requests? */
-	if (this->packets.first == NULL) {
-		/* Use the `persistent' status from the last request. */
-		return this->complete && !this->persistent;
+	if (!RequestPacket_IsReady(this->packets.first)) {
+		Logger_Debug(this->logger, $("Packet is not ready."));
+		return;
 	}
 
-	return false;
+	SocketSession_Write(&this->session,
+		Response_GetHeaders(&this->packets.first->response),
+		SocketSession_OnDone_For(this->packets.first, ref(OnHeadersSent)));
 }

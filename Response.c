@@ -17,7 +17,7 @@ static def(void, DestroyBody) {
 	if (this->body.type == ref(BodyType_Buffer)) {
 		CarrierString_Destroy(&this->body.buf);
 	} else if (this->body.type == ref(BodyType_File)) {
-		File_Close(&this->body.file.file);
+		File_Destroy(&this->body.file.file);
 	} else if (this->body.type == ref(BodyType_Stream)) {
 		/* TODO */
 		assert(false);

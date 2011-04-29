@@ -42,7 +42,7 @@ def(void, Init, Server_Client *client, Logger *logger) {
 
 	Logger_Debug(this->logger, $("Connection initialized"));
 
-	ResponseSender_Init(&this->respSender, client, logger);
+	this->respSender = ResponseSender_New(client, logger);
 }
 
 def(void, Destroy) {
@@ -126,19 +126,36 @@ static def(void, OnRespond, bool persistent) {
 	RequestPacket_Dispatch(packet, persistent);
 }
 
+/* This method is called when an error occurs. It might be the case that there
+ * are still queued packets. These will dropped first so that our error message
+ * is the first packet. After the response has been transferred to the client,
+ * the connection is closed.
+ */
 static inline def(void, Error, HTTP_Status status, RdString msg) {
 	RequestPacket *packet = ResponseSender_GetPacket(&this->respSender);
+
+	/* As we send out responses packet-by-packet, the error message would never
+	 * arrive at the client if there are unfinished responses or responses that
+	 * are waiting for dispatching. Therefore drop all packets first except for
+	 * `packet' which will contain the error response.
+	 */
+	ResponseSender_DropPacketsUntil(&this->respSender, packet);
+
+	/* Now `packet' is the first packet and could be flushed right away. */
 	RequestPacket_Error(packet, status, msg);
+
+	/* Forcing an immediate closure of the connection would drop the response
+	 * packet. We just inject a close event and process it after the enqueued
+	 * write event.
+	 */
+	Server_Client_Close(this->client);
 }
 
 static def(void, Pull) {
 	Logger_Debug(this->logger, $("Got pull"));
 
-	ResponseSender_SetComplete(&this->respSender, false);
-
 	try {
-		bool incomplete = HTTP_Server_Process(&this->server);
-		ResponseSender_SetComplete(&this->respSender, !incomplete);
+		HTTP_Server_Process(&this->server);
 	} catch(HTTP_Query, ExceedsPermittedLength) {
 		call(Error, HTTP_Status_ClientError_RequestEntityTooLarge,
 			$("A parameter exceeds its permitted length."));
@@ -167,12 +184,13 @@ static def(void, Pull) {
 		call(Error, HTTP_Status_ClientError_BadRequest,
 			$("Empty request URI."));
 	} catchAny {
+		call(Error, HTTP_Status_ServerError_Internal,
+			$("Unknown error."));
+
 		Logger_Error(this->logger, $("Uncaught exception in HTTP server"));
 		__exc_rethrow = true;
 	} finally {
-		if (e != 0 || ResponseSender_Close(&this->respSender)) {
-			Server_Client_Close(this->client);
-		}
+
 	} tryEnd;
 }
 

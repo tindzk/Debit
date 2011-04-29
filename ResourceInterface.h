@@ -1,4 +1,5 @@
 #import <HTTP.h>
+#import <Task.h>
 #import <String.h>
 
 #import "Session.h"
@@ -18,16 +19,18 @@ typedef void (ResourceDestroy)(GenericInstance);
 typedef void (ResourceAction) (GenericInstance $this,
 	Session  *sess,
 	Request  *req,
-	Response *resp);
+	Response *resp,
+	Tasks    *tasks);
 
 #define action(name)             \
 	static def(void, name,       \
-		__unused Session *sess,  \
+		__unused Session  *sess, \
 		__unused Request  *req,  \
-		__unused Response *resp)
+		__unused Response *resp, \
+		__unused Tasks    *tasks)
 
 #define dispatch(name) \
-	call(name, sess, req, resp)
+	call(name, sess, req, resp, tasks)
 
 #define RouterConstructor                               \
 	Constructor {                                       \

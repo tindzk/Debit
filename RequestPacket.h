@@ -1,3 +1,5 @@
+#import <Task.h>
+
 #import "Request.h"
 #import "Response.h"
 #import "SessionManager.h"
@@ -22,6 +24,7 @@ class {
 
 	ref(State) state;
 
+	Tasks    tasks;
 	Request  request;
 	Response response;
 

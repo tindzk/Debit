@@ -22,8 +22,8 @@ def(String *, GetMemberAddr, RdString name);
 def(bool, Store, RdString name, RdString value);
 def(void, StoreEx, RdString name, RdString value);
 def(void, CreateResource, ResourceRoute *route, ResourceInterface *resource);
-def(void, Dispatch, Session *sess, Request *request, Response *response);
-def(void, PostDispatch, Session *sess, Request *request, Response *response);
+def(void, Dispatch, Session *sess, Request *request, Response *response, Tasks *tasks);
+def(void, PostDispatch, Session *sess, Request *request, Response *response, Tasks *tasks);
 def(void, Error, HTTP_Status status, RdString msg, Response *response);
 
 #undef self

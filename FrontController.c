@@ -133,7 +133,7 @@ def(void, CreateResource, ResourceRoute *route, ResourceInterface *resource) {
 	}
 }
 
-def(void, Dispatch, Session *sess, Request *request, Response *response) {
+def(void, Dispatch, Session *sess, Request *request, Response *response, Tasks *tasks) {
 	assert(sess     != NULL);
 	assert(request  != NULL);
 	assert(response != NULL);
@@ -171,13 +171,13 @@ def(void, Dispatch, Session *sess, Request *request, Response *response) {
 		 */
 
 		if (this->route->setUp != NULL) {
-			this->route->setUp(this->instance, sess, request, response);
+			this->route->setUp(this->instance, sess, request, response, tasks);
 		}
 
 		#undef action
 
 		try {
-			this->route->action(this->instance, sess, request, response);
+			this->route->action(this->instance, sess, request, response, tasks);
 		} catchAny {
 			String fmt = Exception_Format(e);
 			Logger_Debug(this->logger, fmt.rd);
@@ -197,7 +197,7 @@ def(void, Dispatch, Session *sess, Request *request, Response *response) {
 	}
 }
 
-def(void, PostDispatch, Session *sess, Request *request, Response *response) {
+def(void, PostDispatch, Session *sess, Request *request, Response *response, Tasks *tasks) {
 	assert(sess     != NULL);
 	assert(request  != NULL);
 	assert(response != NULL);
@@ -207,7 +207,7 @@ def(void, PostDispatch, Session *sess, Request *request, Response *response) {
 		assert(!Generic_IsNull(this->instance));
 
 		if (this->route->tearDown != NULL) {
-			this->route->tearDown(this->instance, sess, request, response);
+			this->route->tearDown(this->instance, sess, request, response, tasks);
 		}
 	}
 }

@@ -6,6 +6,7 @@
 def(void, Init, ResponseSender *sender, Logger *logger) {
 	this->sess   = NULL;
 	this->state  = ref(State_Processing);
+	this->tasks  = Tasks_New();
 	this->logger = logger;
 	this->sender = sender;
 
@@ -20,13 +21,31 @@ def(void, Init, ResponseSender *sender, Logger *logger) {
 	this->controller = FrontController_New(logger);
 }
 
+def(void, DestroySession) {
+	if (this->sess != NULL) {
+		SessionManager *sessMgr = SessionManager_GetInstance();
+
+		if (Session_IsReferenced(this->sess)) {
+			/* Update the last activity. */
+			Session_Touch(this->sess);
+		} else {
+			/* Session was not used. It can be safely destroyed. */
+			SessionManager_DestroySession(sessMgr, this->sess);
+		}
+	}
+}
+
 def(void, Destroy) {
+	call(DestroySession);
+
 	FrontController_Destroy(&this->controller);
 
 	String_Destroy(&this->request.priv.referer);
 	String_Destroy(&this->request.priv.sessionId);
 
 	Response_Destroy(&this->response);
+
+	Tasks_Destroy(&this->tasks);
 }
 
 def(void, SetVersion, HTTP_Version version) {
@@ -100,7 +119,7 @@ def(void, Dispatch, bool persistent) {
 	call(ResolveSession);
 
 	FrontController_Dispatch(&this->controller,
-		this->sess, &this->request, &this->response);
+		this->sess, &this->request, &this->response, &this->tasks);
 }
 
 def(void, Error, HTTP_Status status, RdString msg) {
@@ -114,7 +133,7 @@ def(void, Flush) {
 	/* sess is not initialized when an error occurred. */
 	if (this->sess != NULL) {
 		FrontController_PostDispatch(&this->controller,
-			this->sess, &this->request, &this->response);
+			this->sess, &this->request, &this->response, &this->tasks);
 
 		SessionManager *sessMgr = SessionManager_GetInstance();
 
@@ -127,18 +146,10 @@ def(void, Flush) {
 				String_ToCarrier($$("Session-ID")),
 				String_ToCarrier(RdString_Exalt(id)));
 		}
-
-		if (Session_IsReferenced(this->sess)) {
-			/* Update the last activity. */
-			Session_Touch(this->sess);
-		} else {
-			/* Session was not used. It can be safely destroyed. */
-			SessionManager_DestroySession(sessMgr, this->sess);
-		}
 	}
 
 	this->state = ref(State_Done);
-	ResponseSender_SendResponse(this->sender, this);
+	ResponseSender_Flush(this->sender);
 }
 
 def(bool, IsReady) {
