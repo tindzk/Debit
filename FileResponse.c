@@ -2,8 +2,7 @@
 
 void FileResponse(Response *resp, RdString path, DateTime lastModified) {
 	try {
-		File file;
-		File_Open(&file, path, FileStatus_ReadOnly);
+		File file = File_New(path, FileStatus_ReadOnly);
 
 		Stat64 attr = File_GetStat(&file);
 
