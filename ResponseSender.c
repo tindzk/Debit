@@ -4,18 +4,16 @@
 
 rsdef(self, New, Server_Client *client, Logger *logger) {
 	return (self) {
-		.logger     = logger,
-		.client     = client,
-		.session    = SocketSession_New(client->socket.conn),
-		.packets    = DoublyLinkedList_New()
+		.logger  = logger,
+		.client  = client,
+		.session = SocketSession_New(client->socket.conn),
+		.packets = DoublyLinkedList_New()
 	};
 }
 
-def(void, DestroyPacket, RequestPacketExtendedInstance packet) {
+static def(void, DestroyPacket, void *item) {
 	Logger_Info(this->logger, $("Destroying remaining/unsent packet."));
-
-	RequestPacket_Destroy(packet);
-	Pool_Free(Pool_GetInstance(), packet.object);
+	RequestPacket_Destroy(item);
 }
 
 def(void, DropPacketsUntil, RequestPacket *except) {
@@ -43,14 +41,12 @@ def(RequestPacket *, GetPacket) {
 }
 
 def(void, NewPacket) {
-	RequestPacket *packet = Pool_Alloc(Pool_GetInstance(), sizeof(RequestPacket));
-	RequestPacket_Init(packet, this, this->logger);
-
+	RequestPacket *packet = RequestPacket_New(this, this->logger);
 	DoublyLinkedList_InsertEnd(&this->packets, packet);
 }
 
-static sdef(void, OnFileSent,   GenericInstance inst, __unused void *ptr);
-static sdef(void, OnBufferSent, GenericInstance inst, __unused void *ptr);
+static sdef(void, OnFileSent,   Instance inst, __unused void *ptr);
+static sdef(void, OnBufferSent, Instance inst, __unused void *ptr);
 
 static sdef(void, OnSent, RequestPacket *packet, bool flush) {
 	RequestPacket *next = packet->next;
@@ -84,14 +80,13 @@ static sdef(void, OnSent, RequestPacket *packet, bool flush) {
 	DoublyLinkedList_Remove(&_this->packets, packet);
 
 	RequestPacket_Destroy(packet);
-	Pool_Free(Pool_GetInstance(), packet);
 }
 
-static sdef(void, OnHeadersSent, GenericInstance inst, void *ptr) {
+static sdef(void, OnHeadersSent, Instance inst, void *ptr) {
 	assert(ptr != NULL);
-	assert(!Generic_IsNull(inst));
+	assert(Instance_IsValid(inst));
 
-	RequestPacket *packet = inst.object;
+	RequestPacket *packet = inst.addr;
 	String *s = ptr;
 
 	String size = Integer_ToString(s->len);
@@ -125,11 +120,11 @@ static sdef(void, OnHeadersSent, GenericInstance inst, void *ptr) {
 	}
 }
 
-static sdef(void, OnBufferSent, GenericInstance inst, void *ptr) {
+static sdef(void, OnBufferSent, Instance inst, void *ptr) {
 	assert(ptr != NULL);
-	assert(!Generic_IsNull(inst));
+	assert(Instance_IsValid(inst));
 
-	RequestPacket *packet = inst.object;
+	RequestPacket *packet = inst.addr;
 	RdString *str = ptr;
 
 	String size = Integer_ToString(str->len);
@@ -139,11 +134,11 @@ static sdef(void, OnBufferSent, GenericInstance inst, void *ptr) {
 	scall(OnSent, packet, true);
 }
 
-static sdef(void, OnFileSent, GenericInstance inst, __unused void *ptr) {
+static sdef(void, OnFileSent, Instance inst, __unused void *ptr) {
 	assert(ptr != NULL);
-	assert(!Generic_IsNull(inst));
+	assert(Instance_IsValid(inst));
 
-	RequestPacket *packet = inst.object;
+	RequestPacket *packet = inst.addr;
 
 	Logger_Debug(packet->sender->logger, $("File sent"));
 

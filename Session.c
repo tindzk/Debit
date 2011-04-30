@@ -3,13 +3,13 @@
 #define self Session
 
 sdef(self *, New, size_t data) {
-	self *obj = Generic_New(sizeof(self) + data).object;
-	scall(Reset, obj);
-	return obj;
+	DynObject obj = DynObject_New(sizeof(self) + data);
+	scall(Reset, obj.inst);
+	return obj.addr;
 }
 
-def(void, Free) {
-	Generic_Free((SessionInstance) this);
+def(void, Destroy) {
+	DynObject_Destroy(this);
 }
 
 def(void, Reset) {

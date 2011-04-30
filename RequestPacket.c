@@ -3,22 +3,26 @@
 
 #define self RequestPacket
 
-def(void, Init, ResponseSender *sender, Logger *logger) {
-	this->sess   = NULL;
-	this->state  = ref(State_Processing);
-	this->tasks  = Tasks_New();
-	this->logger = logger;
-	this->sender = sender;
+rsdef(self *, New, ResponseSender *sender, Logger *logger) {
+	self *res = DynObject_New(sizeof(self)).addr;
 
-	this->response = Response_New(this);
+	res->sess   = NULL;
+	res->state  = ref(State_Processing);
+	res->tasks  = Tasks_New();
+	res->logger = logger;
+	res->sender = sender;
 
-	this->request.priv.referer       = String_New(0);
-	this->request.priv.sessionId     = String_New(0);
-	this->request.priv.lastModified  = Date_RFC822_New();
-	this->request.priv.referer.len   = 0;
-	this->request.priv.sessionId.len = 0;
+	res->response = Response_New(res);
 
-	this->controller = FrontController_New(logger);
+	res->request.priv.referer       = String_New(0);
+	res->request.priv.sessionId     = String_New(0);
+	res->request.priv.lastModified  = Date_RFC822_New();
+	res->request.priv.referer.len   = 0;
+	res->request.priv.sessionId.len = 0;
+
+	res->controller = FrontController_New(logger);
+
+	return res;
 }
 
 def(void, DestroySession) {
@@ -46,6 +50,8 @@ def(void, Destroy) {
 	Response_Destroy(&this->response);
 
 	Tasks_Destroy(&this->tasks);
+
+	DynObject_Destroy(this);
 }
 
 def(void, SetVersion, HTTP_Version version) {
@@ -86,7 +92,7 @@ static def(void, ResolveSession) {
 		Session *res = SessionManager_Resolve(sessMgr,
 			this->request.priv.sessionId.rd);
 
-		if (Session_IsNull(res)) {
+		if (res == NULL) {
 			this->sess = SessionManager_CreateSession(sessMgr);
 		} else {
 			this->sess = res;

@@ -16,7 +16,7 @@ rsdef(self, New) {
 
 static def(void, DestroyItem, SessionItem *item) {
 	String_Destroy(&item->id);
-	call(DestroySession, item->instance);
+	call(DestroySession, item->sess);
 }
 
 def(void, Destroy) {
@@ -47,7 +47,7 @@ def(void, DestroySession, Session *sess) {
 		this->backend->destroy(Session_GetData(sess));
 	}
 
-	Session_Free(sess);
+	Session_Destroy(sess);
 }
 
 /* TODO Use a better algorithm. */
@@ -56,17 +56,16 @@ def(String, GetUniqueId) {
 	return Integer_ToString((u32) time.sec);
 }
 
-def(RdString, Register, Session *instance) {
-	Session *sess = Session_GetObject(instance);
+def(RdString, Register, Session *sess) {
 	sess->ref = true;
 
 	SessionItem item = {
-		.id       = call(GetUniqueId),
-		.instance = instance
+		.id   = call(GetUniqueId),
+		.sess = sess
 	};
 
 	each(sess, this->sessions) {
-		if (Session_IsNull(sess->instance)) {
+		if (sess == NULL) {
 			*sess = item;
 			goto out;
 		}
@@ -81,7 +80,7 @@ out:
 def(Session *, Resolve, RdString id) {
 	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
-			return sess->instance;
+			return sess->sess;
 		}
 	}
 
@@ -92,7 +91,7 @@ def(void, Unlink, RdString id) {
 	each(sess, this->sessions) {
 		if (String_Equals(sess->id.rd, id)) {
 			call(DestroyItem, sess);
-			sess->instance = NULL;
+			sess->sess = NULL;
 
 			break;
 		}

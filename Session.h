@@ -13,7 +13,7 @@ class {
 };
 
 sdef(self *, New, size_t data);
-def(void, Free);
+def(void, Destroy);
 def(void, Reset);
 def(void *, GetData);
 def(bool, IsReferenced);

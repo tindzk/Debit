@@ -35,7 +35,7 @@ class {
 
 DoublyLinkedList_DeclareList(RequestPacket, RequestPackets);
 
-def(void, Init, struct ResponseSender *sender, Logger *logger);
+rsdef(self *, New, struct ResponseSender *sender, Logger *logger);
 def(void, Destroy);
 def(void, SetVersion, HTTP_Version method);
 def(void, SetMethod, HTTP_Method method);

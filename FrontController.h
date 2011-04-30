@@ -9,7 +9,7 @@
 #define self FrontController
 
 class {
-	GenericInstance   instance;
+	DynObject         object;
 	Logger            *logger;
 	ResourceRoute     *route;
 	ResourceInterface *resource;

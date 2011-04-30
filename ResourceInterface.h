@@ -14,9 +14,9 @@
 #define ResourceInterface_MaxRoutes  15
 #endif
 
-typedef void (ResourceInit)   (GenericInstance);
-typedef void (ResourceDestroy)(GenericInstance);
-typedef void (ResourceAction) (GenericInstance $this,
+typedef void (ResourceInit)   (Instance $this);
+typedef void (ResourceDestroy)(Instance $this);
+typedef void (ResourceAction) (Instance $this,
 	Session  *sess,
 	Request  *req,
 	Response *resp,
