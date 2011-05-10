@@ -144,7 +144,6 @@ def(void, Dispatch, Session *sess, Request *request, Response *response, Tasks *
 	}
 
 	assert(this->route != NULL);
-	assert(DynObject_IsValid(this->object));
 
 	if (this->route->role == Role_Unspecified) {
 		if (this->resource->role == Role_Unspecified) {
@@ -173,7 +172,7 @@ def(void, Dispatch, Session *sess, Request *request, Response *response, Tasks *
 			DynObject_Call(this->route->action, this->object,
 				sess, request, response, tasks);
 		} catchAny {
-			String fmt = Exception_Format(e);
+			OmniString fmt = Exception_Format(e);
 			Logger_Debug(this->logger, fmt.rd);
 
 			Response_SetStatus(response, HTTP_Status_ServerError_Internal);
@@ -198,7 +197,6 @@ def(void, PostDispatch, Session *sess, Request *request, Response *response, Tas
 
 	if (call(HasResource)) {
 		assert(this->route != NULL);
-		assert(DynObject_IsValid(this->object));
 
 		DynObject_Call(this->route->tearDown, this->object,
 			sess, request, response, tasks);

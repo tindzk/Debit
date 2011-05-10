@@ -9,7 +9,7 @@ sdef(self *, New, size_t data) {
 }
 
 def(void, Destroy) {
-	DynObject_Destroy(this);
+	DynObject_Destroy((void *) this);
 }
 
 def(void, Reset) {

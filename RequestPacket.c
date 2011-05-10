@@ -51,7 +51,7 @@ def(void, Destroy) {
 
 	Tasks_Destroy(&this->tasks);
 
-	DynObject_Destroy(this);
+	DynObject_Destroy((void *) this);
 }
 
 def(void, SetVersion, HTTP_Version version) {
